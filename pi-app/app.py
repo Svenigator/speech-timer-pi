@@ -657,14 +657,23 @@ def api_network_status():
             ["iwgetid", "-r"], capture_output=True, text=True, timeout=5
         )
         ssid = ssid_result.stdout.strip()
-        ip_result = subprocess.run(
-            ["hostname", "-I"], capture_output=True, text=True, timeout=5
-        )
-        ip = ip_result.stdout.strip().split()[0] if ip_result.stdout.strip() else ""
+
+        interfaces = get_network_interfaces()
+
+        # Primäre IP: erste Nicht-Loopback-IPv4-Adresse (Rückwärtskompatibilität)
+        primary_ip = ""
+        for iface in interfaces:
+            for addr in iface.get("ipv4", []):
+                primary_ip = addr
+                break
+            if primary_ip:
+                break
+
         return jsonify({
             "ssid": ssid,
-            "ip": ip,
-            "connected": bool(ssid and ip),
+            "ip": primary_ip,
+            "connected": bool(primary_ip),
+            "interfaces": interfaces,
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -702,6 +711,85 @@ def api_network_connect():
 # ============================================================
 # Helpers
 # ============================================================
+def get_network_interfaces():
+    """
+    Liefert eine Liste aller aktiven Netzwerk-Adapter mit ihren IPv4/IPv6-Adressen.
+    Loopback (lo) wird übersprungen. Primär via `ip -json addr`, mit Fallback
+    auf `ip addr show` (regex-Parsing) für ganz alte Systeme.
+    """
+    interfaces = []
+
+    # Primäre Methode: ip -json addr (liefert strukturiertes JSON)
+    try:
+        result = subprocess.run(
+            ["ip", "-json", "addr", "show"],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            data = json.loads(result.stdout)
+            for iface in data:
+                name = iface.get("ifname", "")
+                if not name or name == "lo":
+                    continue
+                # operstate ist "UP", "DOWN", "UNKNOWN", ...
+                state = iface.get("operstate", "UNKNOWN")
+                ipv4 = []
+                ipv6 = []
+                for addr in iface.get("addr_info", []):
+                    family = addr.get("family")
+                    local = addr.get("local")
+                    if not local:
+                        continue
+                    # IPv6 link-local (fe80::) überspringen, nicht hilfreich für User
+                    if family == "inet":
+                        ipv4.append(local)
+                    elif family == "inet6" and not local.lower().startswith("fe80"):
+                        ipv6.append(local)
+                interfaces.append({
+                    "name": name,
+                    "type": _classify_interface(name),
+                    "state": state,
+                    "ipv4": ipv4,
+                    "ipv6": ipv6,
+                })
+            return interfaces
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, OSError):
+        pass
+
+    # Fallback: hostname -I (nur IPv4-Adressen ohne Interface-Namen)
+    try:
+        result = subprocess.run(
+            ["hostname", "-I"], capture_output=True, text=True, timeout=5
+        )
+        ips = result.stdout.strip().split()
+        if ips:
+            interfaces.append({
+                "name": "unknown",
+                "type": "unknown",
+                "state": "UP",
+                "ipv4": ips,
+                "ipv6": [],
+            })
+    except Exception:
+        pass
+
+    return interfaces
+
+
+def _classify_interface(name):
+    """Ordnet den Interface-Namen einem Typ zu: ethernet, wifi, usb, other."""
+    n = name.lower()
+    if n.startswith(("eth", "enp", "enx", "en0")):
+        return "ethernet"
+    if n.startswith(("wlan", "wlp", "wifi")):
+        return "wifi"
+    if n.startswith(("usb", "rndis")):
+        return "usb"
+    if n.startswith("docker") or n.startswith("br-") or n.startswith("virbr"):
+        return "bridge"
+    return "other"
+
+
 def get_timezones():
     try:
         result = subprocess.run(

@@ -4,6 +4,9 @@ Alle erwähnenswerten Änderungen an diesem Projekt.
 
 ## [3.0.2] – 2026
 
+### Neu
+- **Alle Netzwerk-Adapter in den Einstellungen**: Die Netzwerk-Seite zeigt jetzt alle aktiven Interfaces (Ethernet, WLAN, USB, ...) mit IPv4- und IPv6-Adressen und ihrem UP/DOWN-Status. Vorher war nur die erste IP sichtbar.
+
 ### Fixes
 - **Chromium-Erkennung unter Trixie (Debian 13) repariert**: Der Installer nutzt jetzt `apt-cache policy` statt `apt-cache show`, um echte Installations-Kandidaten zu finden. Unter Trixie ist nur `chromium` (Debian-Standard) verfügbar, nicht `chromium-browser` (RPi-Foundation-Fork) – das wird jetzt korrekt erkannt.
 - Installer prüft zusätzlich via `command -v`, ob Chromium bereits installiert ist, bevor es apt bemüht.
