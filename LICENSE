@@ -1,44 +1,35 @@
-@echo off
-REM Installiert die Abhängigkeiten für das Companion-Modul
-REM Dieser Schritt ist erforderlich, bevor das Modul in Companion erscheint.
+---
+name: Bug-Report
+about: Fehler melden
+title: "[BUG] "
+labels: bug
+assignees: ''
+---
 
-echo ==========================================================
-echo   Speech Timer - Companion Module Setup
-echo ==========================================================
-echo.
+## Beschreibung
 
-REM Pruefen ob npm vorhanden
-where npm >nul 2>nul
-if errorlevel 1 (
-    echo FEHLER: npm wurde nicht gefunden.
-    echo Bitte installiere Node.js 22 von https://nodejs.org
-    echo Danach diese Datei erneut ausfuehren.
-    pause
-    exit /b 1
-)
+Was ist passiert? Was hast du erwartet?
 
-echo [1/2] Installiere Abhaengigkeiten ^(@companion-module/base^)...
-call npm install --omit=dev
-if errorlevel 1 (
-    echo.
-    echo FEHLER: npm install ist fehlgeschlagen.
-    echo Bitte pruefe deine Internetverbindung.
-    pause
-    exit /b 1
-)
+## Schritte zur Reproduktion
 
-echo.
-echo [2/2] Fertig!
-echo.
-echo ==========================================================
-echo   Setup abgeschlossen.
-echo ==========================================================
-echo.
-echo Naechste Schritte:
-echo   1. Companion oeffnen
-echo   2. Admin ^> Developer modules path auf den ELTERN-Ordner
-echo      dieses Ordners setzen
-echo   3. Companion neu starten
-echo   4. Connections ^> Add connection ^> "Speech Timer"
-echo.
-pause
+1. 
+2. 
+3. 
+
+## System-Infos
+
+- **Raspberry Pi OS Version:** (Ausgabe von `cat /etc/os-release | grep VERSION_CODENAME`)
+- **Pi-Modell:** (Pi 4, 2GB/4GB/8GB)
+- **Speech-Timer-Version:** (v3.0, v2.x, ...)
+- **Browser für Steuerung:** (Chrome/Safari/Firefox + Version)
+
+## Logs
+
+```
+# Ausgabe von:
+# sudo journalctl -u speech-timer -n 50
+```
+
+## Zusätzliches
+
+Screenshots, weitere Beobachtungen, Workarounds?

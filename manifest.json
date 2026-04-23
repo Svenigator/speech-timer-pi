@@ -1,68 +1,44 @@
-name: CI
+@echo off
+REM Installiert die Abhängigkeiten für das Companion-Modul
+REM Dieser Schritt ist erforderlich, bevor das Modul in Companion erscheint.
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+echo ==========================================================
+echo   Speech Timer - Companion Module Setup
+echo ==========================================================
+echo.
 
-jobs:
-  python-check:
-    name: Python Syntax Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+REM Pruefen ob npm vorhanden
+where npm >nul 2>nul
+if errorlevel 1 (
+    echo FEHLER: npm wurde nicht gefunden.
+    echo Bitte installiere Node.js 22 von https://nodejs.org
+    echo Danach diese Datei erneut ausfuehren.
+    pause
+    exit /b 1
+)
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+echo [1/2] Installiere Abhaengigkeiten ^(@companion-module/base^)...
+call npm install --omit=dev
+if errorlevel 1 (
+    echo.
+    echo FEHLER: npm install ist fehlgeschlagen.
+    echo Bitte pruefe deine Internetverbindung.
+    pause
+    exit /b 1
+)
 
-      - name: Install dependencies
-        run: |
-          cd pi-app
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Check Python syntax
-        run: |
-          cd pi-app
-          python -m py_compile app.py osc_manager.py
-
-      - name: Validate JSON files
-        run: |
-          python -c "import json; json.load(open('companion-module/package.json'))"
-          python -c "import json; json.load(open('companion-module/companion/manifest.json'))"
-
-  node-check:
-    name: Node.js Syntax Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Check Companion module syntax
-        run: |
-          cd companion-module
-          node --check main.js
-
-  frontend-check:
-    name: Frontend JS Syntax Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Check frontend JS
-        run: |
-          for f in pi-app/static/js/*.js; do
-            node --check "$f"
-          done
+echo.
+echo [2/2] Fertig!
+echo.
+echo ==========================================================
+echo   Setup abgeschlossen.
+echo ==========================================================
+echo.
+echo Naechste Schritte:
+echo   1. Companion oeffnen
+echo   2. Admin ^> Developer modules path auf den ELTERN-Ordner
+echo      dieses Ordners setzen
+echo   3. Companion neu starten
+echo   4. Connections ^> Add connection ^> "Speech Timer"
+echo.
+pause
