@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# App config (wird zur Laufzeit erzeugt, nicht versionieren)
+pi-app/config.json
+
+# Socket.IO client lib (wird vom install.sh nachgeladen)
+pi-app/static/js/socket.io.min.js
+
+# Companion / Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pkg/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log

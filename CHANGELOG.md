@@ -1,74 +1,38 @@
-# Speech Timer Pi – Pi-App
+# Changelog
 
-Die Flask-Anwendung, die auf dem Raspberry Pi läuft.
+Alle erwähnenswerten Änderungen an diesem Projekt.
 
-## Installation
+## [3.0.1] – 2026
 
-Komplett-Installation auf frischem Raspberry Pi OS:
+### Fixes
+- Repository-Struktur repariert: Pi-App liegt jetzt in `pi-app/`, Companion-Modul in `companion-module/`, CI-Workflow unter `.github/workflows/`
+- Duplikate und fehlerhafte Datei-Inhalte aus dem Repo entfernt
+- Companion-Modul auf Version 1.1.0 angehoben (Display-Mode-Actions & -Feedbacks)
+- Socket.IO-Client wird lokal gehostet statt per CDN (funktioniert ohne Internet)
+- Fallback-Route `/socket.io/socket.io.js` für alte Browser-Cache-Zustände
+- `kiosk.sh`: Chromium-Binary wird automatisch erkannt (Bookworm vs. Bullseye)
+- `install.sh`: Prüft verfügbares Chromium-Paket und installiert das richtige
 
-```bash
-cd pi-app
-bash scripts/install.sh
-```
+## [3.0.0] – 2026
 
-Das Script erledigt:
-- System-Pakete installieren (Python, Chromium, unclutter, WLAN-Tools)
-- Python Virtual Environment + Dependencies
-- systemd-Service für Autostart anlegen
-- Sudoers-Regeln für Zeit/Netzwerk-Befehle
-- Chromium-Kiosk-Autostart konfigurieren
+### Neu
+- **Getrenntes Laden und Starten**: Presets werden geladen, starten aber nicht automatisch. Der Timer startet erst, wenn die Start-Taste gedrückt wird.
+- **Live-Zeit-Anpassung**: +/-1 Min und +/-5 Min auch während der Timer läuft
+- **Display-Mode-Toggle**: Umschaltung zwischen Timer und Echtzeit-Uhr auf dem Display
+- **OSC-Integration**: Timer kann über Open Sound Control gesteuert werden und sendet Status-Updates
+- **Companion-Modul**: Ready-to-use-Integration für Bitfocus Companion (Stream Deck)
 
-## Manueller Start (zum Entwickeln)
+### Entfernt
+- Redner-Feld (nicht mehr benötigt, da Presets jetzt ohne Redner-Zuordnung arbeiten)
 
-```bash
-cd pi-app
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python3 app.py
-```
+### Fixes
+- NTP wird beim manuellen Zeit-Setzen automatisch deaktiviert (sonst überschrieb NTP die gesetzte Zeit sofort wieder)
+- Timer-State-Machine klarer strukturiert (idle / loaded / running / paused / stopped)
 
-Dann im Browser: `http://localhost:5000`
+## [2.x]
 
-## Routen-Übersicht
+Vorgänger-Version mit Auto-Start bei Preset-Auswahl.
 
-### Web-Seiten
-- `GET  /` – Vollbild-Display
-- `GET  /control` – Steuerungsseite
-- `GET  /settings` – Einstellungsmenü
+## [1.x]
 
-### Timer-API
-- `POST /api/timer/load` – Preset laden (startet nicht)
-- `POST /api/timer/start` – Starten oder fortsetzen
-- `POST /api/timer/pause` – Pause/Resume (toggle)
-- `POST /api/timer/stop` – Stopp auf 00:00
-- `POST /api/timer/reset` – Komplett zurücksetzen
-- `POST /api/timer/adjust` – Zeit ±Sekunden anpassen
-- `GET  /api/timer/status` – Aktueller Status als JSON
-
-### Display-Mode-API
-- `POST /api/display/mode` – Modus setzen (timer/clock)
-- `POST /api/display/mode/toggle` – Zwischen Modi umschalten
-
-### Presets-API
-- `GET  /api/presets` – Alle Presets
-- `POST /api/presets` – Presets speichern
-- `DELETE /api/presets/<id>` – Einzelnes Preset löschen
-
-### System-API
-- `GET  /api/system/time`, `POST /api/system/time`
-- `POST /api/system/ntp`
-- `POST /api/system/timezone`
-
-### Netzwerk-API
-- `GET  /api/network/scan`
-- `GET  /api/network/status`
-- `POST /api/network/connect`
-
-## OSC-Adressen
-
-Siehe [Hauptdokumentation](../docs/Speech-Timer-Handbuch.pdf), Kapitel 7.
-
-## Konfiguration
-
-Alle Einstellungen werden in `config.json` gespeichert (wird beim ersten Start automatisch angelegt). Die Datei ist absichtlich nicht im Repository — siehe `.gitignore`.
+Erste Version mit grundlegenden Timer-Funktionen.

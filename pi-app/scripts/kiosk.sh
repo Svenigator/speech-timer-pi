@@ -37,7 +37,7 @@ xset s off 2>/dev/null
 xset s noblank 2>/dev/null
 xset -dpms 2>/dev/null
 
-# Mauszeiger ausblenden nach Inaktivität (benötigt unclutter)
+# Mauszeiger ausblenden nach Inaktivität
 unclutter -idle 1 -root &
 
 # Eventuelle Absturz-Meldungen verhindern

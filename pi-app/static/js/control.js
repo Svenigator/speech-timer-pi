@@ -141,14 +141,12 @@
         btn.addEventListener('click', async () => {
             const seconds = parseInt(btn.dataset.seconds);
             try {
-                const res = await fetch('/api/timer/adjust', {
+                await fetch('/api/timer/adjust', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({seconds: seconds}),
                 });
-                const data = await res.json();
                 const sign = seconds > 0 ? '+' : '';
-                const mins = Math.abs(seconds) / 60;
                 showToast(`Zeit ${sign}${seconds/60} Min angepasst`, 'success');
             } catch (e) {
                 showToast('Fehler: ' + e.message, 'error');
@@ -185,7 +183,7 @@
     });
 
     // Display-Mode-Toggle
-    async function updateModeButton() {
+    function updateModeButton() {
         btnModeToggle.textContent = currentMode === 'clock' ? '⏱ Timer-Modus' : '🕐 Uhr-Modus';
     }
 
@@ -223,16 +221,16 @@
 
         // Phasen-Farbe
         const colors = {
-            normal: '#ffffff',
-            warning1: '#fbbf24',
-            warning2: '#ef4444',
-            overtime: '#ef4444',
-            paused: '#60a5fa',
-            stopped: '#9ca3af',
-            idle: '#ffffff',
-            loaded: '#ffffff',
+            normal: '#0f172a',
+            warning1: '#d97706',
+            warning2: '#dc2626',
+            overtime: '#dc2626',
+            paused: '#2563eb',
+            stopped: '#64748b',
+            idle: '#0f172a',
+            loaded: '#0f172a',
         };
-        timerPreview.style.color = colors[data.phase] || '#ffffff';
+        timerPreview.style.color = colors[data.phase] || '#0f172a';
 
         currentPreset.textContent = data.preset_name || '—';
 

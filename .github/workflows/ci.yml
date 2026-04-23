@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python:
+    name: Python Lint & Import-Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        working-directory: pi-app
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyflakes
+
+      - name: Pyflakes
+        working-directory: pi-app
+        run: pyflakes app.py osc_manager.py
+
+      - name: Import check
+        working-directory: pi-app
+        run: |
+          python -c "import ast, sys; ast.parse(open('app.py').read()); ast.parse(open('osc_manager.py').read()); print('Syntax OK')"
+
+  companion:
+    name: Companion Module
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install
+        working-directory: companion-module
+        run: npm install --no-audit --no-fund
+
+      - name: Syntax check
+        working-directory: companion-module
+        run: node -c main.js

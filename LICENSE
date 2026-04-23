@@ -1,35 +1,21 @@
----
-name: Bug-Report
-about: Fehler melden
-title: "[BUG] "
-labels: bug
-assignees: ''
----
+MIT License
 
-## Beschreibung
+Copyright (c) 2026 Svenigator
 
-Was ist passiert? Was hast du erwartet?
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-## Schritte zur Reproduktion
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-1. 
-2. 
-3. 
-
-## System-Infos
-
-- **Raspberry Pi OS Version:** (Ausgabe von `cat /etc/os-release | grep VERSION_CODENAME`)
-- **Pi-Modell:** (Pi 4, 2GB/4GB/8GB)
-- **Speech-Timer-Version:** (v3.0, v2.x, ...)
-- **Browser für Steuerung:** (Chrome/Safari/Firefox + Version)
-
-## Logs
-
-```
-# Ausgabe von:
-# sudo journalctl -u speech-timer -n 50
-```
-
-## Zusätzliches
-
-Screenshots, weitere Beobachtungen, Workarounds?
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -2,17 +2,25 @@
 	"name": "speech-timer-pi",
 	"version": "1.1.0",
 	"main": "main.js",
+	"type": "commonjs",
 	"scripts": {
-		"dev": "companion-module-build --dev",
+		"dev": "companion-module-build dev",
 		"build": "companion-module-build",
 		"format": "prettier -w .",
 		"package": "companion-module-build"
 	},
-	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Svenigator/speech-timer-pi.git"
+	},
 	"dependencies": {
 		"@companion-module/base": "^1.12.0"
 	},
+	"devDependencies": {
+		"@companion-module/tools": "^2.2.2"
+	},
 	"engines": {
-		"node": "^22.0.0"
-	}
+		"node": "^22"
+	},
+	"license": "MIT"
 }

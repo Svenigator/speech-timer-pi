@@ -167,6 +167,7 @@
                 </div>
             </div>
         </section>
+
         <!-- OSC-Einstellungen -->
         <section class="tab-content" id="tab-osc">
             <div class="card">
@@ -218,15 +219,16 @@
                             <tr><th>Adresse</th><th>Parameter</th><th>Aktion</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td>/timer/start</td><td>—</td><td>Timer mit aktuellem Preset starten</td></tr>
+                            <tr><td>/timer/start</td><td>—</td><td>Timer starten</td></tr>
                             <tr><td>/timer/pause</td><td>—</td><td>Pausieren / Fortsetzen</td></tr>
                             <tr><td>/timer/stop</td><td>—</td><td>Stoppen</td></tr>
                             <tr><td>/timer/reset</td><td>—</td><td>Zurücksetzen</td></tr>
                             <tr><td>/timer/preset</td><td>int</td><td>Preset nach ID starten (z.B. 1, 2, 3)</td></tr>
                             <tr><td>/timer/preset/name</td><td>string</td><td>Preset nach Name starten</td></tr>
                             <tr><td>/timer/duration</td><td>int</td><td>Dauer in Sekunden setzen & starten</td></tr>
-                            <tr><td>/timer/speaker</td><td>string</td><td>Rednername setzen</td></tr>
                             <tr><td>/timer/adjust</td><td>int</td><td>Zeit anpassen (±Sekunden)</td></tr>
+                            <tr><td>/display/mode</td><td>string</td><td>"timer" oder "clock"</td></tr>
+                            <tr><td>/display/mode/toggle</td><td>—</td><td>Zwischen Timer/Clock toggeln</td></tr>
                         </tbody>
                     </table>
 
@@ -243,7 +245,6 @@
                             <tr><td>/timer/state/elapsed</td><td>int</td><td>Abgelaufene Sekunden</td></tr>
                             <tr><td>/timer/state/duration</td><td>int</td><td>Gesamtdauer in Sekunden</td></tr>
                             <tr><td>/timer/state/time/formatted</td><td>string</td><td>Formatierte Zeit „MM:SS" o. „-MM:SS"</td></tr>
-                            <tr><td>/timer/state/speaker</td><td>string</td><td>Aktueller Rednername</td></tr>
                             <tr><td>/timer/state/preset</td><td>string</td><td>Aktueller Preset-Name</td></tr>
                             <tr><td>/timer/state/overtime</td><td>int</td><td>1 = Zeit überschritten</td></tr>
                         </tbody>

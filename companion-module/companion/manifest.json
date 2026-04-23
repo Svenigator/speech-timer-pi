@@ -1,0 +1,26 @@
+{
+	"id": "speech-timer-pi",
+	"name": "speech-timer-pi",
+	"shortname": "Speech Timer Pi",
+	"description": "Control a Raspberry Pi Speech Timer over HTTP",
+	"version": "1.1.0",
+	"license": "MIT",
+	"repository": "https://github.com/Svenigator/speech-timer-pi",
+	"bugs": "https://github.com/Svenigator/speech-timer-pi/issues",
+	"maintainers": [
+		{
+			"name": "Svenigator",
+			"email": "noreply@example.com"
+		}
+	],
+	"legacyIds": [],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "1.0.0",
+		"entrypoint": "main.js"
+	},
+	"manufacturer": "Speech Timer Pi",
+	"products": ["Speech Timer Pi"],
+	"keywords": ["timer", "countdown", "speech", "presentation", "raspberry-pi"]
+}

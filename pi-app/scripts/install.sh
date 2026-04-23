@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Speech Timer - Installations-Script für Raspberry Pi 4
+# Speech Timer - Installations-Script für Raspberry Pi 4/5
 # Richtet alle benötigten Dienste und Dateien ein
 #
 
@@ -14,7 +14,7 @@ echo ""
 # Prüfen ob als pi-User oder mit sudo ausgeführt
 if [ "$(whoami)" != "pi" ] && [ "$EUID" -ne 0 ]; then
     echo "Dieses Script sollte als 'pi' User ausgeführt werden."
-    echo "Nutze: cd ~/speech-timer-pi && ./scripts/install.sh"
+    echo "Nutze: cd ~/speech-timer-pi && bash scripts/install.sh"
     exit 1
 fi
 
@@ -22,8 +22,14 @@ PROJECT_DIR="/home/pi/speech-timer-pi"
 
 # Falls nicht im Projektverzeichnis, dorthin wechseln
 if [ ! -f "$PROJECT_DIR/app.py" ]; then
-    echo "FEHLER: Projektverzeichnis $PROJECT_DIR nicht gefunden."
-    echo "Bitte kopiere zunächst alle Dateien nach $PROJECT_DIR"
+    echo "FEHLER: $PROJECT_DIR/app.py nicht gefunden."
+    echo ""
+    echo "Das Script erwartet die Pi-App unter $PROJECT_DIR."
+    echo "Wenn du das Repo geklont hast, kopiere nur den Inhalt des"
+    echo "pi-app/-Ordners dorthin, z.B.:"
+    echo ""
+    echo "  cp -r ~/speech-timer-pi-repo/pi-app/. ~/speech-timer-pi/"
+    echo ""
     exit 1
 fi
 
@@ -41,29 +47,30 @@ sudo apt-get install -y \
     unclutter \
     xdotool \
     wireless-tools \
-    wpasupplicant
+    wpasupplicant \
+    curl
 
 # Chromium-Paket je nach OS-Version ermitteln:
 # - Bullseye und älter: chromium-browser
 # - Bookworm und neuer: chromium
 echo "[1b/6] Suche Chromium-Paket..."
 if apt-cache show chromium-browser > /dev/null 2>&1; then
-    echo "  → Installiere chromium-browser (Bullseye oder älter)"
+    echo "  -> Installiere chromium-browser (Bullseye oder älter)"
     sudo apt-get install -y chromium-browser
     CHROMIUM_BIN="chromium-browser"
 elif apt-cache show chromium > /dev/null 2>&1; then
-    echo "  → Installiere chromium (Bookworm oder neuer)"
+    echo "  -> Installiere chromium (Bookworm oder neuer)"
     sudo apt-get install -y chromium
     CHROMIUM_BIN="chromium"
 else
-    echo "  ✗ Weder chromium noch chromium-browser verfügbar!"
-    echo "    Bitte manuell installieren und kiosk.sh anpassen."
+    echo "  !! Weder chromium noch chromium-browser verfügbar!"
+    echo "     Bitte manuell installieren und kiosk.sh anpassen."
     exit 1
 fi
 
 # Kiosk-Script an erkanntes Binary anpassen
 sed -i "s|^CHROMIUM_BIN=.*|CHROMIUM_BIN=\"$CHROMIUM_BIN\"|" "$PROJECT_DIR/scripts/kiosk.sh"
-echo "  → kiosk.sh angepasst: nutzt $CHROMIUM_BIN"
+echo "  -> kiosk.sh angepasst: nutzt $CHROMIUM_BIN"
 
 # ============================================================
 # 2. Python Virtual Environment
@@ -84,7 +91,7 @@ SOCKETIO_FILE="$PROJECT_DIR/static/js/socket.io.min.js"
 SOCKETIO_VERSION="4.7.5"
 
 if [ -f "$SOCKETIO_FILE" ]; then
-    echo "  → Socket.IO-Datei bereits vorhanden, überspringe Download"
+    echo "  -> Socket.IO-Datei bereits vorhanden, überspringe Download"
 else
     SOCKETIO_URLS=(
         "https://cdn.socket.io/${SOCKETIO_VERSION}/socket.io.min.js"
@@ -94,33 +101,27 @@ else
 
     DOWNLOAD_OK=false
     for URL in "${SOCKETIO_URLS[@]}"; do
-        echo "  → Versuche: $URL"
+        echo "  -> Versuche: $URL"
         if curl -fsSL --max-time 30 -o "$SOCKETIO_FILE.tmp" "$URL" 2>/dev/null; then
-            # Prüfe ob Datei sinnvoll groß ist (sollte > 30 KB sein)
             FILE_SIZE=$(stat -c%s "$SOCKETIO_FILE.tmp" 2>/dev/null || echo 0)
             if [ "$FILE_SIZE" -gt 30000 ]; then
                 mv "$SOCKETIO_FILE.tmp" "$SOCKETIO_FILE"
-                echo "  ✓ Socket.IO erfolgreich geladen ($FILE_SIZE Bytes)"
+                echo "  -> Socket.IO geladen ($FILE_SIZE Bytes)"
                 DOWNLOAD_OK=true
                 break
             else
                 rm -f "$SOCKETIO_FILE.tmp"
-                echo "  ✗ Datei zu klein, versuche nächste Quelle"
+                echo "  -> Datei zu klein, nächste Quelle"
             fi
         fi
     done
 
     if [ "$DOWNLOAD_OK" = false ]; then
         echo ""
-        echo "  ⚠️  WARNUNG: Socket.IO konnte nicht geladen werden!"
-        echo "     Bitte später manuell herunterladen:"
-        echo "     wget -O $SOCKETIO_FILE \\"
+        echo "  !! WARNUNG: Socket.IO konnte nicht geladen werden!"
+        echo "     Später manuell:"
+        echo "     curl -o $SOCKETIO_FILE \\"
         echo "       https://cdn.socket.io/${SOCKETIO_VERSION}/socket.io.min.js"
-        echo ""
-        echo "  Oder die Datei per USB übertragen nach:"
-        echo "     $SOCKETIO_FILE"
-        echo ""
-        echo "  Ohne diese Datei zeigt der Timer permanent 00:00."
         echo ""
     fi
 fi
@@ -182,9 +183,9 @@ echo "==================================="
 echo ""
 echo "Der Speech Timer Service läuft jetzt."
 echo ""
-echo "🖥️  Display:    http://$IP:5000/"
-echo "🎛️  Steuerung: http://$IP:5000/control"
-echo "⚙️  Einstell.: http://$IP:5000/settings"
+echo "Display:    http://$IP:5000/"
+echo "Steuerung:  http://$IP:5000/control"
+echo "Einstell.:  http://$IP:5000/settings"
 echo ""
 echo "Beim nächsten Neustart öffnet sich der"
 echo "Browser automatisch im Kiosk-Modus."
