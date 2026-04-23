@@ -3,7 +3,7 @@
 	"name": "speech-timer-pi",
 	"shortname": "Speech Timer Pi",
 	"description": "Control a Raspberry Pi Speech Timer over HTTP",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"license": "MIT",
 	"repository": "https://github.com/Svenigator/speech-timer-pi",
 	"bugs": "https://github.com/Svenigator/speech-timer-pi/issues",

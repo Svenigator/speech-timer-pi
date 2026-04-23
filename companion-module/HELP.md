@@ -15,7 +15,8 @@ Both the Pi and the Companion machine must be on the same network.
 ## Actions
 
 ### Presets
-- **Load Preset (no start)** — Loads a preset without starting. Starts only after *Start* is pressed.
+- **Load Preset (no start)** — Loads a preset via dropdown. Dropdown list is fetched from the Pi and refreshes every 10 seconds.
+- **Load Preset by ID (no start)** — Loads a preset by its numeric ID (e.g. `3`). Unlike the dropdown version, this Action doesn't care about the current preset list — ideal for fixed Stream-Deck buttons that should always load "slot 3", regardless of what's currently there.
 - **Load Manual Time (no start)** — Loads a custom duration.
 - **Refresh Presets** — Fetches the preset list from the Pi again.
 
@@ -44,6 +45,7 @@ Both the Pi and the Companion machine must be on the same network.
 
 All variables are prefixed with `speech-timer-pi:`:
 
+### Timer state
 - `time_formatted` — Remaining time as `MM:SS` or `-MM:SS` during overtime
 - `remaining` — Remaining seconds (negative during overtime)
 - `elapsed`, `duration` — Seconds
@@ -54,6 +56,21 @@ All variables are prefixed with `speech-timer-pi:`:
 - `status_text` — Human-readable status (`READY`, `RUNNING`, `PAUSED`, …)
 - `display_mode` — `timer` or `clock`
 
+### Pi network info
+- `hostname` — Hostname of the Pi
+- `ip_primary` — Primary IP address (first non-loopback)
+- `ip_eth0` — IP address of the Ethernet adapter
+- `ip_wlan0` — IP address of the WiFi adapter
+- `ssid` — Connected WiFi network name
+
+### Preset info (dynamic per preset ID)
+For every preset configured on the Pi, these three variables are available:
+- `preset_name_<ID>` — The preset's name (e.g. `preset_name_3`)
+- `preset_time_<ID>` — The preset's duration as `MM:SS`
+- `preset_duration_<ID>` — The preset's duration in seconds
+
+Useful on button labels: `$(speech-timer-pi:preset_name_3)`
+
 ## Presets (Button templates)
 
 The module ships ready-made button presets in these categories:
@@ -61,4 +78,6 @@ The module ships ready-made button presets in these categories:
 - **Control** — Start / Pause / Stop / Reset
 - **Adjust Time** — ±1 min, ±5 min
 - **Display Mode** — Timer / Clock switches
-- **Load Presets** — One button per preset defined on the Pi
+- **Pi Info** — Hostname, IP eth0, IP wlan0, Primary IP (display-only, no click action)
+- **Preset Slots** — Fixed buttons for preset IDs 1–6, label pulls preset name from the Pi via variable. Stays stable even when presets are renamed.
+- **Load Presets** — One button per existing preset on the Pi. List auto-refreshes every 10 seconds when presets change on the Pi.

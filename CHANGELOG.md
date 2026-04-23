@@ -2,6 +2,21 @@
 
 Alle erwähnenswerten Änderungen an diesem Projekt.
 
+## [3.0.3] – 2026
+
+### Neu
+- **Companion-Modul v1.2.0** mit mehreren Verbesserungen:
+  - Neue Variablen `hostname`, `ip_primary`, `ip_eth0`, `ip_wlan0`, `ssid` zeigen Netzwerk-Infos vom Pi
+  - Neue Info-Button-Presets in Kategorie **„Pi Info"**: Hostname, IP eth0, IP wlan0, Primary IP (reine Anzeige)
+  - Neue Action **„Load Preset by ID"** — lädt ein Preset anhand seiner festen ID (statt Dropdown), ideal für stabile Stream-Deck-Buttons
+  - Neue Button-Kategorie **„Preset Slots"** mit fertigen Buttons für IDs 1–6, die den Preset-Namen automatisch via Variable vom Pi ziehen
+  - Preset-Namen werden als Variablen `preset_name_<ID>`, `preset_time_<ID>`, `preset_duration_<ID>` bereitgestellt
+- Pi-API: `/api/network/status` liefert jetzt zusätzlich den `hostname` des Pi
+
+### Fixes
+- **Companion: Selbst angelegte Presets waren nach Umbenennung auf dem Pi noch mit altem Namen sichtbar** — das Modul erkennt jetzt neben Anzahl auch Name- und Dauer-Änderungen und aktualisiert seine Definitionen automatisch
+- Refresh-Intervall von 30 s auf 10 s reduziert, damit Preset-Änderungen schneller in Companion sichtbar werden
+
 ## [3.0.2] – 2026
 
 ### Neu

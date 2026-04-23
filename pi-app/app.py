@@ -658,6 +658,11 @@ def api_network_status():
         )
         ssid = ssid_result.stdout.strip()
 
+        hostname_result = subprocess.run(
+            ["hostname"], capture_output=True, text=True, timeout=5
+        )
+        hostname = hostname_result.stdout.strip()
+
         interfaces = get_network_interfaces()
 
         # Primäre IP: erste Nicht-Loopback-IPv4-Adresse (Rückwärtskompatibilität)
@@ -671,6 +676,7 @@ def api_network_status():
 
         return jsonify({
             "ssid": ssid,
+            "hostname": hostname,
             "ip": primary_ip,
             "connected": bool(primary_ip),
             "interfaces": interfaces,

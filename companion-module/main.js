@@ -17,6 +17,11 @@ class SpeechTimerInstance extends InstanceBase {
 			current_time: '',
 			time_formatted: '00:00',
 			display_mode: 'timer',
+			hostname: '',
+			ip_primary: '',
+			ip_eth0: '',
+			ip_wlan0: '',
+			ssid: '',
 		}
 		this.pollTimer = null
 		this.presetsTimer = null
@@ -39,6 +44,7 @@ class SpeechTimerInstance extends InstanceBase {
 		if (ok) {
 			this.updateStatus(InstanceStatus.Ok)
 			this.isConnected = true
+			await this.loadNetworkInfo()
 		}
 
 		this.startPolling()
@@ -156,13 +162,27 @@ class SpeechTimerInstance extends InstanceBase {
 	async loadPresets() {
 		const data = await this.httpRequest('/api/presets')
 		if (data && Array.isArray(data)) {
-			const prevCount = this.presets.length
+			// Neu: Änderungen erkennen (Count, Name oder Dauer geändert)
+			const changed = this._presetsChanged(this.presets, data)
 			this.presets = data
-			if (prevCount !== data.length) {
-				this.log('info', 'Loaded ' + this.presets.length + ' presets')
+			if (changed) {
+				this.log('info', 'Presets changed, reloading definitions (' + data.length + ' presets)')
 				this.setupDefinitions()
+				this.updateVariables()
 			}
 			return true
+		}
+		return false
+	}
+
+	_presetsChanged(oldList, newList) {
+		if (oldList.length !== newList.length) return true
+		for (let i = 0; i < newList.length; i++) {
+			const a = oldList[i]
+			const b = newList[i]
+			if (!a || a.id !== b.id || a.name !== b.name || a.duration !== b.duration) {
+				return true
+			}
 		}
 		return false
 	}
@@ -171,6 +191,48 @@ class SpeechTimerInstance extends InstanceBase {
 		const data = await this.httpRequest('/api/display')
 		if (data && data.mode) {
 			this.state.display_mode = data.mode
+		}
+	}
+
+	async loadNetworkInfo() {
+		const data = await this.httpRequest('/api/network/status')
+		if (!data) return
+
+		const prev = {
+			hostname: this.state.hostname,
+			ip_primary: this.state.ip_primary,
+			ip_eth0: this.state.ip_eth0,
+			ip_wlan0: this.state.ip_wlan0,
+			ssid: this.state.ssid,
+		}
+
+		this.state.hostname = data.hostname || ''
+		this.state.ip_primary = data.ip || ''
+		this.state.ssid = data.ssid || ''
+
+		// eth0 / wlan0 aus interfaces-Array rausziehen
+		let ipEth = ''
+		let ipWlan = ''
+		for (const iface of data.interfaces || []) {
+			const ipv4List = iface.ipv4 || []
+			if (ipv4List.length === 0) continue
+			if (iface.name === 'eth0' && !ipEth) ipEth = ipv4List[0]
+			else if (iface.name === 'wlan0' && !ipWlan) ipWlan = ipv4List[0]
+			else if (iface.type === 'ethernet' && !ipEth) ipEth = ipv4List[0]
+			else if (iface.type === 'wifi' && !ipWlan) ipWlan = ipv4List[0]
+		}
+		this.state.ip_eth0 = ipEth
+		this.state.ip_wlan0 = ipWlan
+
+		// Variablen aktualisieren, wenn sich etwas geändert hat
+		if (
+			prev.hostname !== this.state.hostname ||
+			prev.ip_primary !== this.state.ip_primary ||
+			prev.ip_eth0 !== this.state.ip_eth0 ||
+			prev.ip_wlan0 !== this.state.ip_wlan0 ||
+			prev.ssid !== this.state.ssid
+		) {
+			this.updateVariables()
 		}
 	}
 
@@ -189,6 +251,7 @@ class SpeechTimerInstance extends InstanceBase {
 					this.updateStatus(InstanceStatus.Ok)
 					this.log('info', 'Connected to ' + this.getBaseUrl())
 					await this.loadDisplayMode()
+					await this.loadNetworkInfo()
 				}
 				this.handleTimerUpdate(data)
 			} else {
@@ -215,7 +278,8 @@ class SpeechTimerInstance extends InstanceBase {
 		this.presetsTimer = setInterval(() => {
 			this.loadPresets()
 			this.loadDisplayMode()
-		}, 30000)
+			this.loadNetworkInfo()
+		}, 10000)
 	}
 
 	stopPresetsRefresh() {
@@ -285,7 +349,7 @@ class SpeechTimerInstance extends InstanceBase {
 	}
 
 	updateVariables() {
-		this.setVariableValues({
+		const values = {
 			running: this.state.running ? 1 : 0,
 			paused: this.state.paused ? 1 : 0,
 			stopped: this.state.stopped ? 1 : 0,
@@ -299,7 +363,30 @@ class SpeechTimerInstance extends InstanceBase {
 			current_time: this.state.current_time,
 			status_text: this.getStatusText(),
 			display_mode: this.state.display_mode,
-		})
+			// Netzwerk-Info vom Pi
+			hostname: this.state.hostname,
+			ip_primary: this.state.ip_primary,
+			ip_eth0: this.state.ip_eth0,
+			ip_wlan0: this.state.ip_wlan0,
+			ssid: this.state.ssid,
+		}
+
+		// Preset-Namen und -Dauern nach ID als Variablen bereitstellen.
+		// Das erlaubt z.B. auf einem Button: $(speech-timer-pi:preset_name_5)
+		for (const preset of this.presets) {
+			values['preset_name_' + preset.id] = preset.name
+			values['preset_duration_' + preset.id] = preset.duration
+			values['preset_time_' + preset.id] = this._formatDuration(preset.duration)
+		}
+
+		this.setVariableValues(values)
+	}
+
+	_formatDuration(seconds) {
+		const s = Math.max(0, Math.floor(seconds))
+		const m = Math.floor(s / 60)
+		const sec = s % 60
+		return m + ':' + String(sec).padStart(2, '0')
 	}
 
 	// ============================================================
@@ -313,7 +400,7 @@ class SpeechTimerInstance extends InstanceBase {
 	}
 
 	getVariableDefinitions() {
-		return [
+		const vars = [
 			{ variableId: 'time_formatted', name: 'Remaining time (MM:SS)' },
 			{ variableId: 'remaining', name: 'Remaining seconds' },
 			{ variableId: 'elapsed', name: 'Elapsed seconds' },
@@ -327,7 +414,20 @@ class SpeechTimerInstance extends InstanceBase {
 			{ variableId: 'current_time', name: 'Clock time from Pi' },
 			{ variableId: 'status_text', name: 'Status text' },
 			{ variableId: 'display_mode', name: 'Display mode (timer/clock)' },
+			// Netzwerk-Info
+			{ variableId: 'hostname', name: 'Pi hostname' },
+			{ variableId: 'ip_primary', name: 'Primary IP address' },
+			{ variableId: 'ip_eth0', name: 'IP of eth0 (ethernet)' },
+			{ variableId: 'ip_wlan0', name: 'IP of wlan0 (WiFi)' },
+			{ variableId: 'ssid', name: 'Connected WiFi SSID' },
 		]
+		// Dynamisch: pro Preset drei Variablen (Name, Sekunden, MM:SS)
+		for (const preset of this.presets) {
+			vars.push({ variableId: 'preset_name_' + preset.id, name: 'Preset #' + preset.id + ' name' })
+			vars.push({ variableId: 'preset_duration_' + preset.id, name: 'Preset #' + preset.id + ' duration (sec)' })
+			vars.push({ variableId: 'preset_time_' + preset.id, name: 'Preset #' + preset.id + ' time (MM:SS)' })
+		}
+		return vars
 	}
 
 	getActionDefinitions() {
@@ -357,6 +457,39 @@ class SpeechTimerInstance extends InstanceBase {
 					const presetId = parseInt(action.options.preset_id)
 					const preset = self.presets.find((p) => p.id === presetId)
 					if (!preset) return
+					await self.httpRequest('/api/timer/load', {
+						method: 'POST',
+						body: {
+							duration: preset.duration,
+							warning1: preset.warning1,
+							warning2: preset.warning2,
+							preset_name: preset.name,
+						},
+					})
+				},
+			},
+			load_preset_by_number: {
+				name: 'Load Preset by ID (no start)',
+				description: 'Loads preset with the given ID. Useful for static button presets where you want the button to always load e.g. preset 5, regardless of current preset list. Name is pulled via variable.',
+				options: [
+					{
+						id: 'preset_id',
+						type: 'number',
+						label: 'Preset ID',
+						default: 1,
+						min: 1,
+						max: 999,
+						tooltip: 'The preset ID as defined on the Pi (visible in the Settings → Presets page)',
+					},
+				],
+				callback: async (action) => {
+					const presetId = parseInt(action.options.preset_id)
+					const preset = self.presets.find((p) => p.id === presetId)
+					if (!preset) {
+						self.log('warn', 'Preset with ID ' + presetId + ' not found. Refreshing presets list...')
+						await self.loadPresets()
+						return
+					}
 					await self.httpRequest('/api/timer/load', {
 						method: 'POST',
 						body: {
@@ -812,23 +945,110 @@ class SpeechTimerInstance extends InstanceBase {
 			],
 		}
 
-		// --- Kategorie: Presets (dynamisch) ---
+		// --- Kategorie: Pi Info (reine Anzeige-Buttons, kein Klick-Verhalten) ---
+		presets['info_hostname'] = {
+			type: 'button',
+			category: 'Pi Info',
+			name: 'Hostname',
+			style: {
+				text: 'HOST\\n$(speech-timer-pi:hostname)',
+				size: '14',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(40, 80, 120),
+				alignment: 'center:center',
+			},
+			steps: [{ down: [], up: [] }],
+			feedbacks: [],
+		}
+
+		presets['info_ip_eth0'] = {
+			type: 'button',
+			category: 'Pi Info',
+			name: 'IP eth0 (Ethernet)',
+			style: {
+				text: 'LAN\\n$(speech-timer-pi:ip_eth0)',
+				size: '14',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(40, 100, 60),
+				alignment: 'center:center',
+			},
+			steps: [{ down: [], up: [] }],
+			feedbacks: [],
+		}
+
+		presets['info_ip_wlan0'] = {
+			type: 'button',
+			category: 'Pi Info',
+			name: 'IP wlan0 (WiFi)',
+			style: {
+				text: 'WIFI\\n$(speech-timer-pi:ip_wlan0)',
+				size: '14',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(100, 60, 140),
+				alignment: 'center:center',
+			},
+			steps: [{ down: [], up: [] }],
+			feedbacks: [],
+		}
+
+		presets['info_ip_primary'] = {
+			type: 'button',
+			category: 'Pi Info',
+			name: 'Primary IP',
+			style: {
+				text: 'IP\\n$(speech-timer-pi:ip_primary)',
+				size: '14',
+				color: combineRgb(255, 255, 255),
+				bgcolor: combineRgb(60, 60, 100),
+				alignment: 'center:center',
+			},
+			steps: [{ down: [], up: [] }],
+			feedbacks: [],
+		}
+
+		// --- Kategorie: Preset Slots (feste IDs 1–6, Name wird per Variable geladen) ---
+		// Diese Buttons bleiben stabil, auch wenn Presets auf dem Pi umbenannt werden.
+		// Der Button-Text zieht den aktuellen Preset-Namen vom Pi.
+		for (let id = 1; id <= 6; id++) {
+			presets['preset_slot_' + id] = {
+				type: 'button',
+				category: 'Preset Slots',
+				name: 'Load Preset #' + id,
+				style: {
+					text: '#' + id + '\\n$(speech-timer-pi:preset_name_' + id + ')\\n$(speech-timer-pi:preset_time_' + id + ')',
+					size: '14',
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 80, 160),
+					alignment: 'center:center',
+				},
+				steps: [
+					{
+						down: [{ actionId: 'load_preset_by_number', options: { preset_id: id } }],
+						up: [],
+					},
+				],
+				feedbacks: [],
+			}
+		}
+
+		// --- Kategorie: Load Presets (dynamisch, eine Kachel pro existierendem Preset) ---
+		// Im Gegensatz zu "Preset Slots" werden hier nur die tatsächlich auf dem Pi
+		// existierenden Presets aufgelistet. Text wird per Variable geladen, damit
+		// Umbenennung ohne Companion-Neustart greift.
 		this.presets.forEach((preset) => {
-			const m = Math.floor(preset.duration / 60)
-			const s = String(preset.duration % 60).padStart(2, '0')
 			presets['preset_load_' + preset.id] = {
 				type: 'button',
 				category: 'Load Presets',
 				name: 'Load: ' + preset.name,
 				style: {
-					text: preset.name + '\\n' + m + ':' + s,
+					text: '$(speech-timer-pi:preset_name_' + preset.id + ')\\n$(speech-timer-pi:preset_time_' + preset.id + ')',
 					size: '14',
 					color: combineRgb(255, 255, 255),
 					bgcolor: combineRgb(0, 80, 160),
 				},
 				steps: [
 					{
-						down: [{ actionId: 'load_preset', options: { preset_id: preset.id } }],
+						down: [{ actionId: 'load_preset_by_number', options: { preset_id: preset.id } }],
 						up: [],
 					},
 				],
