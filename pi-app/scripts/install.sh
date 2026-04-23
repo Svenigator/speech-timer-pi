@@ -51,22 +51,51 @@ sudo apt-get install -y \
     curl
 
 # Chromium-Paket je nach OS-Version ermitteln:
-# - Bullseye und älter: chromium-browser
-# - Bookworm und neuer: chromium
+# - Bullseye: chromium-browser (RPi-Foundation-Fork)
+# - Bookworm/Trixie: chromium (Debian-Standard)
+# Wir prüfen mit `apt-cache policy`, ob es einen echten Installations-Kandidaten
+# gibt – `apt-cache show` liefert auch False-Positives für virtuelle Pakete.
 echo "[1b/6] Suche Chromium-Paket..."
-if apt-cache show chromium-browser > /dev/null 2>&1; then
-    echo "  -> Installiere chromium-browser (Bullseye oder älter)"
-    sudo apt-get install -y chromium-browser
+
+has_install_candidate() {
+    local pkg="$1"
+    # Extrahiere die 'Candidate:'-Zeile und prüfe, ob sie nicht '(none)' ist
+    apt-cache policy "$pkg" 2>/dev/null \
+        | awk -v p="$pkg" '/^[[:space:]]*Candidate:/ { if ($2 != "(none)") found=1 } END { exit !found }'
+}
+
+CHROMIUM_BIN=""
+
+# Falls Chromium bereits installiert ist, nutzen wir es einfach
+if command -v chromium > /dev/null 2>&1; then
+    echo "  -> chromium ist bereits installiert"
+    CHROMIUM_BIN="chromium"
+elif command -v chromium-browser > /dev/null 2>&1; then
+    echo "  -> chromium-browser ist bereits installiert"
     CHROMIUM_BIN="chromium-browser"
-elif apt-cache show chromium > /dev/null 2>&1; then
-    echo "  -> Installiere chromium (Bookworm oder neuer)"
+# Sonst: das richtige Paket aussuchen. 'chromium' zuerst, da auf Bookworm+Trixie Standard.
+elif has_install_candidate chromium; then
+    echo "  -> Installiere chromium (Bookworm/Trixie)"
     sudo apt-get install -y chromium
     CHROMIUM_BIN="chromium"
+elif has_install_candidate chromium-browser; then
+    echo "  -> Installiere chromium-browser (Bullseye)"
+    sudo apt-get install -y chromium-browser
+    CHROMIUM_BIN="chromium-browser"
 else
     echo "  !! Weder chromium noch chromium-browser verfügbar!"
-    echo "     Bitte manuell installieren und kiosk.sh anpassen."
+    echo "     Prüfe deine apt-Quellen (z.B. mit 'apt-cache policy chromium')."
+    echo "     Manuell installieren mit: sudo apt install chromium"
     exit 1
 fi
+
+# Sanity check: Das Binary muss tatsächlich im Pfad sein
+if ! command -v "$CHROMIUM_BIN" > /dev/null 2>&1; then
+    echo "  !! '$CHROMIUM_BIN' wurde gemeldet, aber das Binary fehlt!"
+    echo "     Bitte prüfe mit: which chromium chromium-browser"
+    exit 1
+fi
+echo "  -> Nutze: $(command -v "$CHROMIUM_BIN")"
 
 # Kiosk-Script an erkanntes Binary anpassen
 sed -i "s|^CHROMIUM_BIN=.*|CHROMIUM_BIN=\"$CHROMIUM_BIN\"|" "$PROJECT_DIR/scripts/kiosk.sh"

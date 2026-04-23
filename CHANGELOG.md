@@ -2,6 +2,13 @@
 
 Alle erwähnenswerten Änderungen an diesem Projekt.
 
+## [3.0.2] – 2026
+
+### Fixes
+- **Chromium-Erkennung unter Trixie (Debian 13) repariert**: Der Installer nutzt jetzt `apt-cache policy` statt `apt-cache show`, um echte Installations-Kandidaten zu finden. Unter Trixie ist nur `chromium` (Debian-Standard) verfügbar, nicht `chromium-browser` (RPi-Foundation-Fork) – das wird jetzt korrekt erkannt.
+- Installer prüft zusätzlich via `command -v`, ob Chromium bereits installiert ist, bevor es apt bemüht.
+- Klarerer Fehlertext, wenn kein Chromium gefunden wird, mit Hinweis auf manuelle Diagnose
+
 ## [3.0.1] – 2026
 
 ### Fixes
