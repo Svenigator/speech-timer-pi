@@ -1,0 +1,463 @@
+// Einstellungsseite
+(function() {
+    'use strict';
+
+    // Toast-Funktion
+    function showToast(msg, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = 'toast show ' + type;
+        setTimeout(() => { toast.className = 'toast'; }, 3000);
+    }
+
+    // ============================================================
+    // Tab-Navigation
+    // ============================================================
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+            // Lade Daten je nach Tab
+            if (btn.dataset.tab === 'network') loadNetworkStatus();
+            if (btn.dataset.tab === 'time') startClockUpdate();
+            if (btn.dataset.tab === 'osc') loadOSCConfig();
+        });
+    });
+
+    // ============================================================
+    // Display-Einstellungen
+    // ============================================================
+    function syncColorInput(colorId, textId) {
+        const colorEl = document.getElementById(colorId);
+        const textEl = document.getElementById(textId);
+        colorEl.addEventListener('input', () => textEl.value = colorEl.value.toUpperCase());
+        textEl.addEventListener('input', () => {
+            if (/^#[0-9A-Fa-f]{6}$/.test(textEl.value)) {
+                colorEl.value = textEl.value;
+            }
+        });
+    }
+
+    syncColorInput('bg-color', 'bg-color-text');
+    syncColorInput('text-color', 'text-color-text');
+    syncColorInput('warn1-color', 'warn1-color-text');
+    syncColorInput('warn2-color', 'warn2-color-text');
+    syncColorInput('overtime-color', 'overtime-color-text');
+
+    // Helligkeits-Slider
+    const brightness = document.getElementById('brightness');
+    const brightnessValue = document.getElementById('brightness-value');
+    brightness.addEventListener('input', () => {
+        brightnessValue.textContent = brightness.value;
+    });
+
+    // Speichern
+    document.getElementById('btn-save-display').addEventListener('click', async () => {
+        const data = {
+            background_color: document.getElementById('bg-color').value,
+            text_color: document.getElementById('text-color').value,
+            warning1_color: document.getElementById('warn1-color').value,
+            warning2_color: document.getElementById('warn2-color').value,
+            overtime_color: document.getElementById('overtime-color').value,
+            brightness: parseInt(brightness.value),
+        };
+        try {
+            await fetch('/api/display', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data),
+            });
+            // Blink-Einstellungen sind im "system"-Teil der Config
+            await fetch('/api/system/blink', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    blink_on_warning: document.getElementById('blink-warning').checked,
+                    blink_on_overtime: document.getElementById('blink-overtime').checked,
+                }),
+            });
+            showToast('Anzeige-Einstellungen gespeichert', 'success');
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    // ============================================================
+    // Presets - Full Editor
+    // ============================================================
+    let presets = [];
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    async function loadPresets() {
+        try {
+            const res = await fetch('/api/presets');
+            presets = await res.json();
+            renderPresetsFull();
+        } catch (e) {
+            showToast('Fehler beim Laden: ' + e.message, 'error');
+        }
+    }
+
+    function renderPresetsFull() {
+        const container = document.getElementById('presets-full-editor');
+        container.innerHTML = '';
+        presets.forEach((preset, index) => {
+            const row = document.createElement('div');
+            row.className = 'preset-edit-row';
+            const minutes = Math.floor(preset.duration / 60);
+            const seconds = preset.duration % 60;
+            row.innerHTML = `
+                <input type="text" value="${escapeHtml(preset.name)}" data-field="name" placeholder="Name">
+                <input type="number" value="${minutes}" data-field="minutes" min="0" placeholder="Min">
+                <input type="number" value="${preset.warning1}" data-field="warning1" min="0" placeholder="Warn1 s">
+                <input type="number" value="${preset.warning2}" data-field="warning2" min="0" placeholder="Warn2 s">
+                <button class="btn-delete" data-index="${index}">✕</button>
+            `;
+            row.querySelector('.btn-delete').addEventListener('click', () => {
+                presets.splice(index, 1);
+                renderPresetsFull();
+            });
+            row.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', () => {
+                    const field = input.dataset.field;
+                    if (field === 'name') {
+                        preset.name = input.value;
+                    } else if (field === 'minutes') {
+                        preset.duration = (parseInt(input.value) || 0) * 60;
+                    } else {
+                        preset[field] = parseInt(input.value) || 0;
+                    }
+                });
+            });
+            container.appendChild(row);
+        });
+    }
+
+    document.getElementById('btn-add-full-preset').addEventListener('click', () => {
+        const newId = presets.length ? Math.max(...presets.map(p => p.id)) + 1 : 1;
+        presets.push({
+            id: newId,
+            name: 'Neue Vorlage',
+            duration: 300,
+            warning1: 60,
+            warning2: 30,
+        });
+        renderPresetsFull();
+    });
+
+    document.getElementById('btn-save-full-presets').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/presets', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({presets: presets}),
+            });
+            const result = await res.json();
+            showToast('Vorlagen gespeichert', 'success');
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    loadPresets();
+
+    // ============================================================
+    // Systemzeit
+    // ============================================================
+    let clockInterval = null;
+
+    function updateCurrentTime() {
+        fetch('/api/system/time')
+            .then(r => r.json())
+            .then(data => {
+                const dt = new Date(data.datetime);
+                document.getElementById('current-time').textContent =
+                    dt.toLocaleString('de-DE');
+            })
+            .catch(() => {});
+    }
+
+    function startClockUpdate() {
+        updateCurrentTime();
+        if (!clockInterval) {
+            clockInterval = setInterval(updateCurrentTime, 1000);
+        }
+    }
+
+    document.getElementById('btn-set-time').addEventListener('click', async () => {
+        const dt = document.getElementById('new-datetime').value;
+        if (!dt) {
+            showToast('Bitte Datum/Uhrzeit eingeben', 'warning');
+            return;
+        }
+        try {
+            const res = await fetch('/api/system/time', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({datetime: dt}),
+            });
+            const result = await res.json();
+            if (result.status === 'ok') {
+                showToast('Systemzeit aktualisiert', 'success');
+                updateCurrentTime();
+            } else {
+                showToast('Fehler: ' + (result.message || 'Unbekannt'), 'error');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-set-timezone').addEventListener('click', async () => {
+        const tz = document.getElementById('timezone-select').value;
+        try {
+            const res = await fetch('/api/system/timezone', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({timezone: tz}),
+            });
+            const result = await res.json();
+            if (result.status === 'ok') {
+                showToast('Zeitzone gesetzt: ' + tz, 'success');
+                updateCurrentTime();
+            } else {
+                showToast('Fehler: ' + (result.message || 'Unbekannt'), 'error');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    // ============================================================
+    // Netzwerk
+    // ============================================================
+    async function loadNetworkStatus() {
+        const statusEl = document.getElementById('network-status');
+        try {
+            const res = await fetch('/api/network/status');
+            const data = await res.json();
+            if (data.connected) {
+                statusEl.className = 'network-status connected';
+                statusEl.innerHTML = `
+                    <div>✅ Verbunden mit: <strong>${escapeHtml(data.ssid)}</strong></div>
+                    <div>IP-Adresse: <strong>${escapeHtml(data.ip)}</strong></div>
+                `;
+            } else {
+                statusEl.className = 'network-status disconnected';
+                statusEl.innerHTML = '❌ Nicht verbunden';
+            }
+        } catch (e) {
+            statusEl.innerHTML = 'Netzwerkstatus nicht verfügbar';
+        }
+    }
+
+    document.getElementById('btn-scan-wifi').addEventListener('click', async () => {
+        const btn = document.getElementById('btn-scan-wifi');
+        const list = document.getElementById('wifi-list');
+        btn.disabled = true;
+        btn.textContent = '🔄 Scannt...';
+        list.innerHTML = '<div style="padding:1rem;">Suche Netzwerke...</div>';
+
+        try {
+            const res = await fetch('/api/network/scan');
+            const data = await res.json();
+            if (data.networks && data.networks.length > 0) {
+                list.innerHTML = '';
+                data.networks.forEach(net => {
+                    const item = document.createElement('div');
+                    item.className = 'wifi-item';
+                    item.innerHTML = `
+                        <div class="wifi-ssid">${escapeHtml(net.ssid)}</div>
+                        <div class="wifi-meta">
+                            ${net.encrypted ? '<span class="wifi-encrypted">🔒</span>' : ''}
+                            <span class="wifi-signal">${net.quality}%</span>
+                        </div>
+                    `;
+                    item.addEventListener('click', () => openWifiDialog(net));
+                    list.appendChild(item);
+                });
+            } else {
+                list.innerHTML = '<div style="padding:1rem;">Keine Netzwerke gefunden</div>';
+            }
+        } catch (e) {
+            list.innerHTML = '<div style="padding:1rem;color:red;">Fehler: ' + e.message + '</div>';
+        }
+        btn.disabled = false;
+        btn.textContent = '🔄 Netzwerke scannen';
+    });
+
+    function openWifiDialog(network) {
+        const dialog = document.getElementById('wifi-dialog');
+        document.getElementById('wifi-ssid').value = network.ssid;
+        document.getElementById('wifi-password').value = '';
+        dialog.classList.remove('hidden');
+        dialog.dataset.encrypted = network.encrypted;
+    }
+
+    document.getElementById('btn-cancel-wifi').addEventListener('click', () => {
+        document.getElementById('wifi-dialog').classList.add('hidden');
+    });
+
+    document.getElementById('btn-connect-wifi').addEventListener('click', async () => {
+        const ssid = document.getElementById('wifi-ssid').value;
+        const password = document.getElementById('wifi-password').value;
+        try {
+            const res = await fetch('/api/network/connect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ssid, password}),
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast('Netzwerk-Konfiguration gespeichert', 'success');
+                document.getElementById('wifi-dialog').classList.add('hidden');
+                setTimeout(loadNetworkStatus, 3000);
+            } else {
+                showToast('Fehler: ' + data.message, 'error');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    // Initial laden
+    loadNetworkStatus();
+
+    // ============================================================
+    // OSC
+    // ============================================================
+    let oscTargets = [];
+
+    async function loadOSCConfig() {
+        try {
+            const res = await fetch('/api/osc');
+            const data = await res.json();
+
+            document.getElementById('osc-enabled').checked = !!data.enabled;
+            document.getElementById('osc-receive-port').value = data.receive_port || 8000;
+            oscTargets = data.targets || [];
+            renderOSCTargets();
+            updateOSCStatusText(data);
+        } catch (e) {
+            showToast('Fehler beim Laden: ' + e.message, 'error');
+        }
+    }
+
+    function updateOSCStatusText(data) {
+        const statusText = document.getElementById('osc-status-text');
+        if (data.server_running) {
+            statusText.textContent = `Aktiv · Port ${data.receive_port} · ${data.num_targets} Ziele`;
+            statusText.classList.add('active');
+        } else {
+            statusText.textContent = 'Deaktiviert';
+            statusText.classList.remove('active');
+        }
+    }
+
+    function renderOSCTargets() {
+        const container = document.getElementById('osc-targets-list');
+        container.innerHTML = '';
+        oscTargets.forEach((target, index) => {
+            const row = document.createElement('div');
+            row.className = 'osc-target-row';
+            row.innerHTML = `
+                <input type="text" placeholder="Name (z.B. Companion)"
+                       value="${escapeHtml(target.name || '')}" data-field="name">
+                <input type="text" placeholder="IP-Adresse"
+                       value="${escapeHtml(target.ip || '')}" data-field="ip">
+                <input type="number" placeholder="Port" min="1" max="65535"
+                       value="${target.port || 8001}" data-field="port">
+                <label class="osc-toggle" title="Aktiv/Inaktiv">
+                    <input type="checkbox" data-field="enabled" ${target.enabled !== false ? 'checked' : ''}>
+                    <span class="osc-toggle-slider"></span>
+                </label>
+                <button class="btn-delete" data-index="${index}">✕</button>
+            `;
+            // Change-Handler
+            row.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', () => {
+                    const field = input.dataset.field;
+                    if (field === 'enabled') {
+                        target.enabled = input.checked;
+                    } else if (field === 'port') {
+                        target.port = parseInt(input.value) || 8001;
+                    } else {
+                        target[field] = input.value;
+                    }
+                });
+            });
+            // Delete
+            row.querySelector('.btn-delete').addEventListener('click', () => {
+                oscTargets.splice(index, 1);
+                renderOSCTargets();
+            });
+            container.appendChild(row);
+        });
+    }
+
+    document.getElementById('btn-add-osc-target').addEventListener('click', () => {
+        oscTargets.push({
+            name: 'Companion',
+            ip: '192.168.1.50',
+            port: 8001,
+            enabled: true,
+        });
+        renderOSCTargets();
+    });
+
+    document.getElementById('btn-save-osc').addEventListener('click', async () => {
+        const data = {
+            enabled: document.getElementById('osc-enabled').checked,
+            receive_port: parseInt(document.getElementById('osc-receive-port').value) || 8000,
+            targets: oscTargets,
+        };
+        try {
+            const res = await fetch('/api/osc', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data),
+            });
+            const result = await res.json();
+            if (result.status === 'saved') {
+                showToast('OSC-Einstellungen gespeichert', 'success');
+                updateOSCStatusText({
+                    server_running: result.server_running,
+                    num_targets: result.num_targets,
+                    receive_port: data.receive_port,
+                });
+            } else {
+                showToast('Fehler beim Speichern', 'error');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-test-osc').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/osc/test', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    address: '/timer/test',
+                    value: 'Test aus Speech Timer',
+                }),
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast(`Test gesendet an: ${data.sent_to.join(', ')}`, 'success');
+            } else {
+                showToast(data.message || 'Fehler', 'warning');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+})();

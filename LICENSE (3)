@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Timer - Einstellungen</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/control.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+</head>
+<body>
+    <header>
+        <h1>⚙️ Einstellungen</h1>
+        <nav>
+            <a href="/control" class="btn btn-secondary">← Steuerung</a>
+            <a href="/" target="_blank" class="btn btn-secondary">Display</a>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Tab-Navigation -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="display">🖥️ Anzeige</button>
+            <button class="tab-btn" data-tab="presets">📋 Vorlagen</button>
+            <button class="tab-btn" data-tab="time">🕐 Zeit</button>
+            <button class="tab-btn" data-tab="network">📶 Netzwerk</button>
+            <button class="tab-btn" data-tab="osc">🎛️ OSC</button>
+        </nav>
+
+        <!-- Display-Einstellungen -->
+        <section class="tab-content active" id="tab-display">
+            <div class="card">
+                <h2>Display-Einstellungen</h2>
+
+                <div class="settings-grid">
+                    <div class="form-row">
+                        <label>Hintergrundfarbe</label>
+                        <div class="color-input">
+                            <input type="color" id="bg-color" value="{{ config.display.background_color }}">
+                            <input type="text" id="bg-color-text" value="{{ config.display.background_color }}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Text- / Timer-Farbe</label>
+                        <div class="color-input">
+                            <input type="color" id="text-color" value="{{ config.display.text_color }}">
+                            <input type="text" id="text-color-text" value="{{ config.display.text_color }}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Warnung 1 (gelb)</label>
+                        <div class="color-input">
+                            <input type="color" id="warn1-color" value="{{ config.display.warning1_color }}">
+                            <input type="text" id="warn1-color-text" value="{{ config.display.warning1_color }}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Warnung 2 (rot)</label>
+                        <div class="color-input">
+                            <input type="color" id="warn2-color" value="{{ config.display.warning2_color }}">
+                            <input type="text" id="warn2-color-text" value="{{ config.display.warning2_color }}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Overtime-Farbe</label>
+                        <div class="color-input">
+                            <input type="color" id="overtime-color" value="{{ config.display.overtime_color }}">
+                            <input type="text" id="overtime-color-text" value="{{ config.display.overtime_color }}">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Bildschirmhelligkeit: <span id="brightness-value">{{ config.display.brightness }}</span>%</label>
+                        <input type="range" id="brightness" min="10" max="100" value="{{ config.display.brightness }}">
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">Anzeigeoptionen</h3>
+                <div class="checkbox-row">
+                    <label>
+                        <input type="checkbox" id="blink-warning" {% if config.system.blink_on_warning %}checked{% endif %}>
+                        Bei Warnung 2 blinken
+                    </label>
+                    <label>
+                        <input type="checkbox" id="blink-overtime" {% if config.system.blink_on_overtime %}checked{% endif %}>
+                        Bei Overtime blinken
+                    </label>
+                </div>
+
+                <button id="btn-save-display" class="btn btn-primary" style="margin-top: 1.5rem;">Anzeige speichern</button>
+            </div>
+        </section>
+
+        <!-- Presets -->
+        <section class="tab-content" id="tab-presets">
+            <div class="card">
+                <h2>Vorlagen verwalten</h2>
+                <div id="presets-full-editor"></div>
+                <button id="btn-add-full-preset" class="btn btn-secondary">+ Neue Vorlage</button>
+                <button id="btn-save-full-presets" class="btn btn-primary">Speichern</button>
+            </div>
+        </section>
+
+        <!-- Systemzeit -->
+        <section class="tab-content" id="tab-time">
+            <div class="card">
+                <h2>Systemzeit & Zeitzone</h2>
+
+                <div class="form-row">
+                    <label>Aktuelle Systemzeit</label>
+                    <div id="current-time" class="big-display">—</div>
+                </div>
+
+                <div class="form-row">
+                    <label for="new-datetime">Neue Datum/Uhrzeit setzen</label>
+                    <input type="datetime-local" id="new-datetime" value="{{ current_time }}">
+                    <button id="btn-set-time" class="btn btn-primary" style="margin-top: 0.5rem;">Zeit setzen</button>
+                </div>
+
+                <div class="form-row">
+                    <label for="timezone-select">Zeitzone</label>
+                    <select id="timezone-select">
+                        {% for tz in timezones %}
+                        <option value="{{ tz }}" {% if tz == config.system.timezone %}selected{% endif %}>{{ tz }}</option>
+                        {% endfor %}
+                    </select>
+                    <button id="btn-set-timezone" class="btn btn-primary" style="margin-top: 0.5rem;">Zeitzone setzen</button>
+                </div>
+
+                <div class="info-box">
+                    ℹ️ Hinweis: Das Setzen der Systemzeit erfordert sudo-Rechte. Stellen Sie sicher, dass der Service-User diese hat (siehe README).
+                </div>
+            </div>
+        </section>
+
+        <!-- Netzwerk / WLAN -->
+        <section class="tab-content" id="tab-network">
+            <div class="card">
+                <h2>Netzwerk-Status</h2>
+                <div id="network-status" class="network-status">
+                    <div>Lade Status...</div>
+                </div>
+
+                <h3 style="margin-top: 1.5rem;">WLAN-Netzwerke</h3>
+                <button id="btn-scan-wifi" class="btn btn-secondary">🔄 Netzwerke scannen</button>
+
+                <div id="wifi-list" class="wifi-list"></div>
+
+                <!-- WLAN-Dialog -->
+                <div id="wifi-dialog" class="wifi-dialog hidden">
+                    <h3>Mit WLAN verbinden</h3>
+                    <div class="form-row">
+                        <label>Netzwerk (SSID)</label>
+                        <input type="text" id="wifi-ssid" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label>Passwort</label>
+                        <input type="password" id="wifi-password" placeholder="WLAN-Passwort">
+                    </div>
+                    <div class="dialog-buttons">
+                        <button id="btn-cancel-wifi" class="btn btn-secondary">Abbrechen</button>
+                        <button id="btn-connect-wifi" class="btn btn-primary">Verbinden</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- OSC-Einstellungen -->
+        <section class="tab-content" id="tab-osc">
+            <div class="card">
+                <h2>OSC-Steuerung</h2>
+                <p style="color: var(--color-secondary); margin-bottom: 1rem;">
+                    Mit Open Sound Control (OSC) kann der Timer von externen Systemen wie Companion /
+                    Stream Deck gesteuert werden. Gleichzeitig können Statusinformationen
+                    an andere Geräte gesendet werden.
+                </p>
+
+                <!-- Aktivierung -->
+                <div class="osc-status-box" id="osc-status-box">
+                    <div>
+                        <label class="osc-toggle">
+                            <input type="checkbox" id="osc-enabled">
+                            <span class="osc-toggle-slider"></span>
+                            <strong>OSC aktivieren</strong>
+                        </label>
+                    </div>
+                    <div id="osc-status-text" class="osc-status-text">Deaktiviert</div>
+                </div>
+
+                <!-- Empfangs-Port -->
+                <h3 style="margin-top: 1.5rem;">Empfangs-Port (eingehend)</h3>
+                <div class="form-row">
+                    <label>UDP-Port, auf dem Befehle empfangen werden</label>
+                    <input type="number" id="osc-receive-port" min="1024" max="65535" value="8000">
+                </div>
+
+                <!-- OSC-Ziele -->
+                <h3 style="margin-top: 1.5rem;">Ziele (ausgehend)</h3>
+                <p style="color: var(--color-secondary); font-size: 0.9rem; margin-bottom: 0.5rem;">
+                    Geräte, an die Status-Updates gesendet werden (z.B. Stream Deck / Companion)
+                </p>
+                <div id="osc-targets-list"></div>
+                <button id="btn-add-osc-target" class="btn btn-secondary">+ Ziel hinzufügen</button>
+
+                <div style="margin-top: 1.5rem;">
+                    <button id="btn-save-osc" class="btn btn-primary">OSC-Einstellungen speichern</button>
+                    <button id="btn-test-osc" class="btn btn-secondary">Test-Nachricht senden</button>
+                </div>
+
+                <!-- OSC-Referenz -->
+                <details class="osc-reference">
+                    <summary>📖 OSC-Adressen-Referenz</summary>
+                    <h4>Eingehende Befehle (an den Timer)</h4>
+                    <table class="osc-table">
+                        <thead>
+                            <tr><th>Adresse</th><th>Parameter</th><th>Aktion</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>/timer/start</td><td>—</td><td>Timer mit aktuellem Preset starten</td></tr>
+                            <tr><td>/timer/pause</td><td>—</td><td>Pausieren / Fortsetzen</td></tr>
+                            <tr><td>/timer/stop</td><td>—</td><td>Stoppen</td></tr>
+                            <tr><td>/timer/reset</td><td>—</td><td>Zurücksetzen</td></tr>
+                            <tr><td>/timer/preset</td><td>int</td><td>Preset nach ID starten (z.B. 1, 2, 3)</td></tr>
+                            <tr><td>/timer/preset/name</td><td>string</td><td>Preset nach Name starten</td></tr>
+                            <tr><td>/timer/duration</td><td>int</td><td>Dauer in Sekunden setzen & starten</td></tr>
+                            <tr><td>/timer/speaker</td><td>string</td><td>Rednername setzen</td></tr>
+                            <tr><td>/timer/adjust</td><td>int</td><td>Zeit anpassen (±Sekunden)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h4 style="margin-top: 1rem;">Ausgehende Nachrichten (vom Timer)</h4>
+                    <table class="osc-table">
+                        <thead>
+                            <tr><th>Adresse</th><th>Typ</th><th>Bedeutung</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>/timer/state/running</td><td>int</td><td>1 = läuft, 0 = läuft nicht</td></tr>
+                            <tr><td>/timer/state/paused</td><td>int</td><td>1 = pausiert, 0 = nicht</td></tr>
+                            <tr><td>/timer/state/phase</td><td>string</td><td>idle / normal / warning1 / warning2 / overtime</td></tr>
+                            <tr><td>/timer/state/remaining</td><td>int</td><td>Verbleibende Sekunden (negativ = overtime)</td></tr>
+                            <tr><td>/timer/state/elapsed</td><td>int</td><td>Abgelaufene Sekunden</td></tr>
+                            <tr><td>/timer/state/duration</td><td>int</td><td>Gesamtdauer in Sekunden</td></tr>
+                            <tr><td>/timer/state/time/formatted</td><td>string</td><td>Formatierte Zeit „MM:SS" o. „-MM:SS"</td></tr>
+                            <tr><td>/timer/state/speaker</td><td>string</td><td>Aktueller Rednername</td></tr>
+                            <tr><td>/timer/state/preset</td><td>string</td><td>Aktueller Preset-Name</td></tr>
+                            <tr><td>/timer/state/overtime</td><td>int</td><td>1 = Zeit überschritten</td></tr>
+                        </tbody>
+                    </table>
+                </details>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+</body>
+</html>
