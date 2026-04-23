@@ -133,6 +133,82 @@ input[type="range"] {
     color: #991b1b;
 }
 
+/* Netzwerk-Interfaces */
+.iface-header {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    opacity: 0.85;
+}
+
+.iface-row {
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.iface-row:first-child {
+    margin-top: 0;
+}
+
+.iface-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.iface-icon {
+    font-size: 1.1rem;
+}
+
+.iface-name {
+    font-family: monospace;
+}
+
+.iface-state {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    letter-spacing: 0.03em;
+}
+
+.iface-state.iface-up {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.iface-state.iface-down {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.iface-ssid {
+    font-size: 0.85rem;
+    color: var(--color-secondary);
+}
+
+.iface-ipv4, .iface-ipv6 {
+    font-size: 0.88rem;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.iface-ipv4 code, .iface-ipv6 code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.iface-more {
+    color: var(--color-secondary);
+    font-size: 0.8rem;
+}
+
 .wifi-list {
     margin-top: 1rem;
     display: flex;

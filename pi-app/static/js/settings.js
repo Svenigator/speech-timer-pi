@@ -210,20 +210,63 @@
     });
 
     // ============ Netzwerk ============
+    function ifaceIcon(type) {
+        switch (type) {
+            case 'ethernet': return '🔌';
+            case 'wifi':     return '📶';
+            case 'usb':      return '🔗';
+            case 'bridge':   return '🌉';
+            default:         return '🖧';
+        }
+    }
+
+    function renderInterface(iface, ssid) {
+        const ipv4 = (iface.ipv4 || []).map(ip => `<code>${escapeHtml(ip)}</code>`).join(', ') || '<em>keine IPv4</em>';
+        const ipv6Count = (iface.ipv6 || []).length;
+        const ipv6 = ipv6Count > 0
+            ? `<div class="iface-ipv6">IPv6: <code>${escapeHtml(iface.ipv6[0])}</code>${ipv6Count > 1 ? ` <span class="iface-more">(+${ipv6Count - 1})</span>` : ''}</div>`
+            : '';
+        const state = iface.state || 'UNKNOWN';
+        const stateClass = state === 'UP' ? 'iface-up' : 'iface-down';
+        const ssidLabel = iface.type === 'wifi' && ssid
+            ? ` · <span class="iface-ssid">${escapeHtml(ssid)}</span>`
+            : '';
+        return `
+            <div class="iface-row">
+                <div class="iface-head">
+                    <span class="iface-icon">${ifaceIcon(iface.type)}</span>
+                    <span class="iface-name"><strong>${escapeHtml(iface.name)}</strong></span>
+                    <span class="iface-state ${stateClass}">${escapeHtml(state)}</span>
+                    ${ssidLabel}
+                </div>
+                <div class="iface-ipv4">IPv4: ${ipv4}</div>
+                ${ipv6}
+            </div>
+        `;
+    }
+
     async function loadNetworkStatus() {
+        const el = document.getElementById('network-status');
         try {
             const res = await fetch('/api/network/status');
             const data = await res.json();
-            const el = document.getElementById('network-status');
-            if (data.connected) {
-                el.className = 'network-status connected';
-                el.innerHTML = `<strong>Verbunden mit:</strong> ${escapeHtml(data.ssid)}<br><strong>IP:</strong> ${escapeHtml(data.ip)}`;
-            } else {
+            const interfaces = data.interfaces || [];
+
+            if (interfaces.length === 0) {
                 el.className = 'network-status disconnected';
-                el.innerHTML = '<strong>Nicht verbunden</strong>';
+                el.innerHTML = '<strong>Kein aktiver Netzwerk-Adapter</strong>';
+                return;
             }
+
+            el.className = data.connected ? 'network-status connected' : 'network-status disconnected';
+            const hasWifi = interfaces.some(i => i.type === 'wifi' && (i.ipv4 || []).length > 0);
+            const header = hasWifi && data.ssid
+                ? `<div class="iface-header"><strong>WLAN:</strong> ${escapeHtml(data.ssid)}</div>`
+                : '';
+            el.innerHTML = header + interfaces.map(iface => renderInterface(iface, data.ssid)).join('');
         } catch (e) {
-            document.getElementById('network-status').textContent = 'Status nicht abrufbar';
+            el.className = 'network-status disconnected';
+            el.textContent = 'Status nicht abrufbar';
         }
     }
 
