@@ -4,3 +4,7 @@ python-socketio>=5.10.0
 python-engineio>=4.8.0
 simple-websocket>=1.0.0
 python-osc>=1.8.0
+# Stream Deck (optional - kann fehlen wenn kein Stream Deck genutzt wird)
+streamdeck>=0.9.5
+Pillow>=10.0.0
+requests>=2.31.0

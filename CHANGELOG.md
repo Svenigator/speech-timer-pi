@@ -2,6 +2,21 @@
 
 Alle erwähnenswerten Änderungen an diesem Projekt.
 
+## [3.0.4] – 2026
+
+### Neu
+- **Direkter Stream-Deck-Anschluss am Pi** — kein Companion mehr nötig:
+  - Eigenständiger Python-Service `streamdeck_controller.py`, parallel zum Hauptservice
+  - **Auto-Detection des Stream-Deck-Modells** — erkennt Mini (6), Neo (8), MK.2 (15), XL (32) automatisch und lädt passendes Default-Layout
+  - **Hot-Plug**: USB-Anschluss/-Wechsel im Betrieb funktioniert ohne Service-Restart
+  - Live-Anzeige der Restzeit mit Phasen-Farbe (grün/gelb/rot/blink)
+  - Preset-Slots, Action-Tasten, Info-Felder (Hostname, IP)
+  - Layout pro Tastenanzahl in `streamdeck.json` überschreibbar
+- Neuer systemd-Service `speech-timer-streamdeck.service`
+- udev-Regel für rootless USB-Zugriff
+- Doku in `docs/Streamdeck.md`
+- Companion-Modul bleibt parallel nutzbar — beide Wege gleichzeitig möglich
+
 ## [3.0.3] – 2026
 
 ### Neu

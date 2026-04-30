@@ -186,6 +186,47 @@ sudo systemctl enable speech-timer.service
 sudo systemctl start speech-timer.service
 
 # ============================================================
+# 5b. Stream Deck: udev-Regel + Service (optional)
+# ============================================================
+echo "[5b/6] Konfiguriere Stream Deck Support (optional)..."
+
+# Systempakete für Stream Deck (libhidapi für USB-HID-Zugriff)
+sudo apt-get install -y libhidapi-libusb0 libusb-1.0-0 libjpeg-dev zlib1g-dev
+
+# udev-Regel: 'pi'-User darf Stream Deck ohne sudo ansprechen
+UDEV_RULE="/etc/udev/rules.d/70-streamdeck.rules"
+sudo tee "$UDEV_RULE" > /dev/null <<'EOF'
+# Elgato Stream Deck - Zugriff für plugdev/pi
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0fd9", MODE="0666", GROUP="plugdev"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0fd9", MODE="0666", GROUP="plugdev"
+EOF
+
+# pi zur plugdev-Gruppe hinzufügen (ist meist schon drin, schadet aber nicht)
+sudo usermod -aG plugdev pi 2>/dev/null || true
+
+# udev-Regeln neu einlesen
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+
+# systemd-Service für Stream Deck Controller installieren (aber NICHT starten)
+# Service startet automatisch wenn Stream Deck angesteckt ist und der Pi bootet.
+# Manuell aktivieren mit: sudo systemctl enable speech-timer-streamdeck
+if [ -f systemd/speech-timer-streamdeck.service ]; then
+    sudo cp systemd/speech-timer-streamdeck.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    # Auto-Enable nur wenn Stream Deck erkannt wird (Vendor-ID 0fd9)
+    if lsusb 2>/dev/null | grep -qi "0fd9"; then
+        echo "  -> Stream Deck erkannt, Service wird aktiviert"
+        sudo systemctl enable speech-timer-streamdeck.service
+        sudo systemctl start speech-timer-streamdeck.service
+    else
+        echo "  -> Kein Stream Deck angesteckt - Service ist installiert,"
+        echo "     wird nicht automatisch gestartet."
+        echo "     Aktivieren mit: sudo systemctl enable --now speech-timer-streamdeck"
+    fi
+fi
+
+# ============================================================
 # 6. Autostart für Kiosk-Modus
 # ============================================================
 echo "[6/6] Konfiguriere Kiosk-Autostart..."
