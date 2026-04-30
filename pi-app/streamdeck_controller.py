@@ -73,23 +73,23 @@ log = logging.getLogger("streamdeck")
 # 6 Tasten = Stream Deck Mini (3 Spalten × 2 Reihen)
 LAYOUT_6_KEYS = {
     "0": {"type": "timer_display"},
-    "1": {"type": "action", "action": "start", "label": "▶", "color": COLOR_NORMAL},
-    "2": {"type": "action", "action": "pause", "label": "⏸", "color": COLOR_PAUSED},
+    "1": {"type": "action", "action": "start", "label": "START", "color": COLOR_NORMAL},
+    "2": {"type": "action", "action": "pause", "label": "PAUSE", "color": COLOR_PAUSED},
     "3": {"type": "preset_slot", "preset_id": 1},
     "4": {"type": "preset_slot", "preset_id": 2},
-    "5": {"type": "action", "action": "reset", "label": "↺", "color": COLOR_BG},
+    "5": {"type": "action", "action": "reset", "label": "RESET", "color": COLOR_BG},
 }
 
 # 8 Tasten = Stream Deck Neo / Pedal (selten, aber abgedeckt)
 LAYOUT_8_KEYS = {
     "0": {"type": "timer_display"},
     "1": {"type": "preset_name_display"},
-    "2": {"type": "action", "action": "start", "label": "▶ START", "color": COLOR_NORMAL},
-    "3": {"type": "action", "action": "pause", "label": "⏸ PAUSE", "color": COLOR_PAUSED},
+    "2": {"type": "action", "action": "start", "label": "START", "color": COLOR_NORMAL},
+    "3": {"type": "action", "action": "pause", "label": "PAUSE", "color": COLOR_PAUSED},
     "4": {"type": "preset_slot", "preset_id": 1},
     "5": {"type": "preset_slot", "preset_id": 2},
-    "6": {"type": "action", "action": "stop",  "label": "⏹ STOP",  "color": COLOR_STOPPED},
-    "7": {"type": "action", "action": "reset", "label": "↺ RESET", "color": COLOR_BG},
+    "6": {"type": "action", "action": "stop",  "label": "STOP",  "color": COLOR_STOPPED},
+    "7": {"type": "action", "action": "reset", "label": "RESET", "color": COLOR_BG},
 }
 
 # 15 Tasten = Stream Deck MK.2 / Standard (5 Spalten × 3 Reihen)
@@ -98,19 +98,19 @@ LAYOUT_15_KEYS = {
     "0":  {"type": "timer_display"},
     "1":  {"type": "timer_display"},
     "2":  {"type": "preset_name_display"},
-    "3":  {"type": "action", "action": "start", "label": "▶ START", "color": COLOR_NORMAL},
-    "4":  {"type": "action", "action": "pause", "label": "⏸ PAUSE", "color": COLOR_PAUSED},
+    "3":  {"type": "action", "action": "start", "label": "START", "color": COLOR_NORMAL},
+    "4":  {"type": "action", "action": "pause", "label": "PAUSE", "color": COLOR_PAUSED},
     # Reihe 1: Presets
     "5":  {"type": "preset_slot", "preset_id": 1},
     "6":  {"type": "preset_slot", "preset_id": 2},
     "7":  {"type": "preset_slot", "preset_id": 3},
     "8":  {"type": "preset_slot", "preset_id": 4},
-    "9":  {"type": "action", "action": "stop",  "label": "⏹ STOP",  "color": COLOR_STOPPED},
+    "9":  {"type": "action", "action": "stop",  "label": "STOP",  "color": COLOR_STOPPED},
     # Reihe 2: Adjust + System
-    "10": {"type": "action", "action": "adjust_-60", "label": "−1 MIN", "color": COLOR_SECONDARY},
+    "10": {"type": "action", "action": "adjust_-60", "label": "-1 MIN", "color": COLOR_SECONDARY},
     "11": {"type": "action", "action": "adjust_+60", "label": "+1 MIN", "color": COLOR_NORMAL},
-    "12": {"type": "action", "action": "reset",       "label": "↺ RESET", "color": COLOR_BG},
-    "13": {"type": "action", "action": "mode_toggle", "label": "🕐 MODE", "color": COLOR_ACCENT},
+    "12": {"type": "action", "action": "reset",       "label": "RESET", "color": COLOR_BG},
+    "13": {"type": "action", "action": "mode_toggle", "label": "MODE", "color": COLOR_ACCENT},
     "14": {"type": "info_hostname"},
 }
 
@@ -121,10 +121,10 @@ LAYOUT_32_KEYS = {
     "1": {"type": "timer_display"},
     "2": {"type": "timer_display"},
     "3": {"type": "preset_name_display"},
-    "4": {"type": "action", "action": "start", "label": "▶ START", "color": COLOR_NORMAL},
-    "5": {"type": "action", "action": "pause", "label": "⏸ PAUSE", "color": COLOR_PAUSED},
-    "6": {"type": "action", "action": "stop",  "label": "⏹ STOP",  "color": COLOR_STOPPED},
-    "7": {"type": "action", "action": "reset", "label": "↺ RESET", "color": COLOR_BG},
+    "4": {"type": "action", "action": "start", "label": "START", "color": COLOR_NORMAL},
+    "5": {"type": "action", "action": "pause", "label": "PAUSE", "color": COLOR_PAUSED},
+    "6": {"type": "action", "action": "stop",  "label": "STOP",  "color": COLOR_STOPPED},
+    "7": {"type": "action", "action": "reset", "label": "RESET", "color": COLOR_BG},
     # Reihe 1: Presets 1-8
     "8":  {"type": "preset_slot", "preset_id": 1},
     "9":  {"type": "preset_slot", "preset_id": 2},
@@ -144,11 +144,11 @@ LAYOUT_32_KEYS = {
     "22": {"type": "preset_slot", "preset_id": 15},
     "23": {"type": "preset_slot", "preset_id": 16},
     # Reihe 3: Adjust + System + Info
-    "24": {"type": "action", "action": "adjust_-300", "label": "−5 MIN", "color": COLOR_SECONDARY},
-    "25": {"type": "action", "action": "adjust_-60",  "label": "−1 MIN", "color": COLOR_SECONDARY},
+    "24": {"type": "action", "action": "adjust_-300", "label": "-5 MIN", "color": COLOR_SECONDARY},
+    "25": {"type": "action", "action": "adjust_-60",  "label": "-1 MIN", "color": COLOR_SECONDARY},
     "26": {"type": "action", "action": "adjust_+60",  "label": "+1 MIN", "color": COLOR_NORMAL},
     "27": {"type": "action", "action": "adjust_+300", "label": "+5 MIN", "color": COLOR_NORMAL},
-    "28": {"type": "action", "action": "mode_toggle", "label": "🕐 MODE", "color": COLOR_ACCENT},
+    "28": {"type": "action", "action": "mode_toggle", "label": "MODE", "color": COLOR_ACCENT},
     "29": {"type": "info_hostname"},
     "30": {"type": "info_ip_eth0"},
     "31": {"type": "info_ip_wlan0"},
@@ -326,28 +326,43 @@ class ButtonRenderer:
     def render_preset_name(self, state):
         phase = state.get("phase", "idle")
         bg = get_phase_color(phase) if phase != "idle" else COLOR_IDLE
-        preset_name = state.get("preset_name") or "—"
+        preset_name = state.get("preset_name") or "--"
 
         def draw(d, img):
             w, h = img.size
             self._draw_centered_text(
-                d, "VORLAGE", (w // 2, 16),
+                d, "VORLAGE", (w // 2, 14),
                 self._get_font(FONT_SMALL_SIZE), COLOR_TEXT
             )
-            font = self._get_font(FONT_MEDIUM_SIZE)
             words = preset_name.split()
+
+            # Schriftgröße dynamisch: bei langen Namen kleiner
+            font_size = FONT_MEDIUM_SIZE
+            if len(preset_name) > 15:
+                font_size = FONT_SMALL_SIZE + 2
+
+            font = self._get_font(font_size)
+
             if len(words) > 1:
-                mid = len(words) // 2
-                line1 = " ".join(words[:mid])
-                line2 = " ".join(words[mid:])
+                # Beste Zwei-Zeilen-Aufteilung suchen
+                best_split = 1
+                best_diff = 999
+                for i in range(1, len(words)):
+                    a = " ".join(words[:i])
+                    b = " ".join(words[i:])
+                    diff = abs(len(a) - len(b))
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_split = i
+                line1 = " ".join(words[:best_split])
+                line2 = " ".join(words[best_split:])
                 self._draw_centered_text(d, line1, (w // 2, h // 2), font, COLOR_TEXT)
                 self._draw_centered_text(d, line2, (w // 2, h // 2 + 22), font, COLOR_TEXT)
             else:
-                if len(preset_name) > 12:
-                    preset_name_short = preset_name[:11] + "…"
-                else:
-                    preset_name_short = preset_name
-                self._draw_centered_text(d, preset_name_short, (w // 2, h // 2 + 6),
+                short = preset_name
+                if len(preset_name) > 13:
+                    short = preset_name[:12] + "."
+                self._draw_centered_text(d, short, (w // 2, h // 2 + 6),
                                           font, COLOR_TEXT)
 
         return self._make_image(bg, draw)
@@ -372,21 +387,54 @@ class ButtonRenderer:
 
         def draw(d, img):
             w, h = img.size
+            # Slot-Nummer oben
             self._draw_centered_text(
-                d, f"#{preset_id}", (w // 2, 12),
+                d, f"#{preset_id}", (w // 2, 11),
                 self._get_font(FONT_SMALL_SIZE), (200, 200, 200)
             )
+
+            # Preset-Name: aufteilen in zwei Zeilen falls nötig
             name = preset["name"]
-            if len(name) > 12:
-                name = name[:11] + "…"
-            self._draw_centered_text(
-                d, name, (w // 2, h // 2),
-                self._get_font(FONT_MEDIUM_SIZE), COLOR_TEXT
-            )
+            font_size = FONT_MEDIUM_SIZE
+            line1, line2 = name, ""
+
+            if len(name) > 8:
+                # Versuche an Leerzeichen zu splitten
+                words = name.split()
+                if len(words) > 1:
+                    # Aufteilen so dass beide Zeilen ähnlich lang
+                    best_split = 1
+                    best_diff = 999
+                    for i in range(1, len(words)):
+                        a = " ".join(words[:i])
+                        b = " ".join(words[i:])
+                        diff = abs(len(a) - len(b))
+                        if diff < best_diff:
+                            best_diff = diff
+                            best_split = i
+                    line1 = " ".join(words[:best_split])
+                    line2 = " ".join(words[best_split:])
+                    # Schriftgröße reduzieren wenn eine Zeile noch zu lang
+                    if max(len(line1), len(line2)) > 10:
+                        font_size = FONT_SMALL_SIZE + 2
+                else:
+                    # Ein einzelnes langes Wort - kürzen mit Punkt
+                    if len(name) > 11:
+                        line1 = name[:10] + "."
+                    font_size = FONT_SMALL_SIZE + 2
+
+            font = self._get_font(font_size)
+            if line2:
+                self._draw_centered_text(d, line1, (w // 2, h // 2 - 4), font, COLOR_TEXT)
+                self._draw_centered_text(d, line2, (w // 2, h // 2 + 16), font, COLOR_TEXT)
+            else:
+                self._draw_centered_text(d, line1, (w // 2, h // 2 + 4), font, COLOR_TEXT)
+
+            # Dauer unten
             duration_str = format_time(preset.get("duration", 0))
             self._draw_centered_text(
-                d, duration_str, (w // 2, h - 18),
-                self._get_font(FONT_SMALL_SIZE), (200, 200, 200)
+                d, duration_str, (w // 2, h - 14),
+                self._get_font(FONT_SMALL_SIZE), (210, 210, 210)
             )
 
         return self._make_image(bg, draw)
@@ -414,34 +462,44 @@ class ButtonRenderer:
     def render_info(self, label, value):
         def draw(d, img):
             w, h = img.size
+            # Label oben
             self._draw_centered_text(
-                d, label, (w // 2, 16),
+                d, label, (w // 2, 14),
                 self._get_font(FONT_SMALL_SIZE), (180, 180, 180)
             )
-            if value:
-                if len(value) > 14 and "." in value:
-                    parts = value.split(".")
-                    if len(parts) == 4:
-                        line1 = ".".join(parts[:2]) + "."
-                        line2 = ".".join(parts[2:])
-                        self._draw_centered_text(
-                            d, line1, (w // 2, h // 2),
-                            self._get_font(FONT_SMALL_SIZE), COLOR_TEXT
-                        )
-                        self._draw_centered_text(
-                            d, line2, (w // 2, h // 2 + 16),
-                            self._get_font(FONT_SMALL_SIZE), COLOR_TEXT
-                        )
-                        return
+            if not value:
                 self._draw_centered_text(
-                    d, value, (w // 2, h // 2 + 4),
-                    self._get_font(FONT_MEDIUM_SIZE), COLOR_TEXT
-                )
-            else:
-                self._draw_centered_text(
-                    d, "—", (w // 2, h // 2 + 4),
+                    d, "--", (w // 2, h // 2 + 4),
                     self._get_font(FONT_MEDIUM_SIZE), (120, 120, 120)
                 )
+                return
+
+            # IP-Adressen erkennen (drei Punkte = IPv4)
+            if value.count(".") == 3:
+                parts = value.split(".")
+                # Immer zweizeilig: x.y. / z.w
+                line1 = f"{parts[0]}.{parts[1]}."
+                line2 = f"{parts[2]}.{parts[3]}"
+                self._draw_centered_text(
+                    d, line1, (w // 2, h // 2 - 4),
+                    self._get_font(FONT_SMALL_SIZE + 2), COLOR_TEXT
+                )
+                self._draw_centered_text(
+                    d, line2, (w // 2, h // 2 + 16),
+                    self._get_font(FONT_SMALL_SIZE + 2), COLOR_TEXT
+                )
+                return
+
+            # Hostname oder anderes - mit dynamischer Schriftgrößen-Anpassung
+            font_size = FONT_MEDIUM_SIZE
+            if len(value) > 12:
+                font_size = FONT_SMALL_SIZE + 2
+            if len(value) > 16:
+                value = value[:15] + "."
+            self._draw_centered_text(
+                d, value, (w // 2, h // 2 + 6),
+                self._get_font(font_size), COLOR_TEXT
+            )
 
         return self._make_image((40, 40, 50), draw)
 

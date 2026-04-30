@@ -2,6 +2,16 @@
 
 Alle erwähnenswerten Änderungen an diesem Projekt.
 
+## [3.0.5] – 2026
+
+### Behoben
+- **Stream Deck Lesbarkeit** — alle Renderer überarbeitet:
+  - Unicode-Symbole (▶ ⏸ ⏹ ↺ 🕐) durch ASCII-Text ersetzt — der DejaVuSans-Font auf Raspberry Pi OS hat diese Glyphen nicht und zeigte stattdessen Vierecke
+  - IP-Adressen werden zuverlässig zweizeilig dargestellt mit lesbarer Schriftgröße
+  - Preset-Namen mit dynamischer Schriftgrößen-Anpassung und sauberem Wortumbruch
+  - Em-Dash und Ellipsis-Zeichen durch ASCII-Fallbacks ersetzt
+- Bestehende `streamdeck.json` muss nach Update gelöscht werden, damit die neuen Defaults greifen
+
 ## [3.0.4] – 2026
 
 ### Neu
