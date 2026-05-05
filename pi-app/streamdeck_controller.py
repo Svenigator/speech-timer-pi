@@ -618,6 +618,7 @@ class StreamDeckController:
         self.layout = layout
         self.api = api
         self.renderer = ButtonRenderer(deck)
+        self._blank_img = None
         self.lock = threading.Lock()
         self._last_render = {}
         self._stop = False
@@ -628,6 +629,11 @@ class StreamDeckController:
         self._blink_visible = True
         self._last_blink_toggle = time.time()
         self._last_phase = ""
+
+    def _get_blank_img(self):
+        if self._blank_img is None:
+            self._blank_img = self.renderer.render_blank()
+        return self._blank_img
 
     def open(self):
         # Deck wird bereits offen übergeben — nur initialisieren
@@ -699,12 +705,12 @@ class StreamDeckController:
             try:
                 if kind == "timer_display":
                     if not self._blink_visible:
-                        img = self.renderer.render_blank()
+                        img = self._get_blank_img()
                     else:
                         img = self.renderer.render_timer(self.state)
                 elif kind == "timer_component":
                     if not self._blink_visible:
-                        img = self.renderer.render_blank()
+                        img = self._get_blank_img()
                     else:
                         img = self.renderer.render_timer_component(
                             self.state, config.get("component", "seconds")
