@@ -443,3 +443,37 @@ input[type="range"] {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+/* ============ AP-Badge ============ */
+.ap-badge {
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.ap-badge-active {
+    background: #16a34a;
+    color: #fff;
+}
+
+.ap-badge-inactive {
+    background: #475569;
+    color: #fff;
+}
+
+/* ============ Radio-Gruppe ============ */
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: normal;
+}
