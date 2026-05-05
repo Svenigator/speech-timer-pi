@@ -8,8 +8,8 @@
    sudo systemctl status speech-timer
    ```
    Must say `active (running)`. If not: `sudo systemctl start speech-timer` and check the journal with `journalctl -u speech-timer -n 50`.
-3. **Port reachable?** From any PC on the network, open `http://<Pi-IP>:5000/` in a browser. If that works, Companion should also be able to connect.
-4. **Firewall:** A default Raspberry Pi OS install has no firewall, but if you added `ufw` or similar: `sudo ufw allow 5000/tcp`.
+3. **Port reachable?** From any PC on the network, open `http://<Pi-IP>/` in a browser. If that works, Companion should also be able to connect.
+4. **Firewall:** A default Raspberry Pi OS install has no firewall, but if you added `ufw` or similar: `sudo ufw allow 80/tcp`.
 
 ## Presets dropdown says "— No presets loaded —"
 
@@ -35,20 +35,20 @@ Reduce `Poll interval` in the module config (e.g. 250 ms). The default 500 ms is
 On the Pi:
 ```bash
 # Is Flask listening?
-sudo ss -tlnp | grep :5000
+sudo ss -tlnp | grep :80
 
 # Local API test
-curl http://localhost:5000/api/timer/status
+curl http://localhost/api/timer/status
 
 # Public API test (from Pi to itself via IP)
-curl http://$(hostname -I | awk '{print $1}'):5000/api/timer/status
+curl http://$(hostname -I | awk '{print $1}')/api/timer/status
 ```
 
 On the Companion machine:
 ```bash
 # Replace 192.168.1.42 with your Pi IP
-curl http://192.168.1.42:5000/api/timer/status
-curl http://192.168.1.42:5000/api/presets
+curl http://192.168.1.42/api/timer/status
+curl http://192.168.1.42/api/presets
 ```
 
 If the second command works from the Companion machine but the module still won't connect, it's almost certainly a wrong IP or wrong port in the instance config.

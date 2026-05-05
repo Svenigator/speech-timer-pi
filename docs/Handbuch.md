@@ -60,7 +60,7 @@ Farben wechseln automatisch nach Phase: Normal → Gelb (Warnung 1) → Rot (War
 Von jedem Gerät im selben Netzwerk:
 
 ```
-http://<Pi-IP>:5000/control
+http://<Pi-IP>/control
 ```
 
 Die IP steht auf dem Display nach dem ersten Start, oder ist im Router zu finden.
@@ -112,7 +112,7 @@ Der Ordner `companion-module/` im Repository enthält ein fertiges Bitfocus-Comp
 2. In dem Ordner `npm install` ausführen
 3. Companion neu starten
 4. Neue Instanz vom Typ "Speech Timer Pi" anlegen
-5. IP des Pi und Port (5000) eintragen
+5. IP des Pi und Port (80) eintragen
 
 Danach stehen in Companion alle Actions, Feedbacks und Variablen zur Verfügung. Vorgefertigte Button-Presets gibt es in den Kategorien *Display*, *Control*, *Adjust Time*, *Display Mode* und *Load Presets*.
 

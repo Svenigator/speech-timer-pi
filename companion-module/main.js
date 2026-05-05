@@ -103,7 +103,7 @@ class SpeechTimerInstance extends InstanceBase {
 				id: 'port',
 				label: 'Port',
 				width: 4,
-				default: 5000,
+				default: 80,
 				min: 1,
 				max: 65535,
 			},
@@ -124,7 +124,7 @@ class SpeechTimerInstance extends InstanceBase {
 	// ============================================================
 	getBaseUrl() {
 		const host = this.config && this.config.host ? this.config.host : ''
-		const port = this.config && this.config.port ? this.config.port : 5000
+		const port = this.config && this.config.port ? this.config.port : 80
 		return 'http://' + host + ':' + port
 	}
 

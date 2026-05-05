@@ -7,7 +7,7 @@ Companion module for controlling a Raspberry Pi based Speech Timer via its HTTP 
 | Field | Description |
 |-------|-------------|
 | Target IP | IP address of the Raspberry Pi running the Speech Timer (e.g. `192.168.1.42`). |
-| Port | Flask port, default `5000`. |
+| Port | Flask port, default `80`. |
 | Poll interval | How often Companion polls the Pi for status (default 500 ms). Lower values = smoother countdown, higher values = less network traffic. |
 
 Both the Pi and the Companion machine must be on the same network.

@@ -37,7 +37,7 @@ bash scripts/install.sh
 sudo reboot
 ```
 
-Nach dem Neustart startet der Browser automatisch im Kiosk-Modus mit dem Timer-Display. Die Web-Steuerung ist unter `http://<Pi-IP>:5000/control` von jedem Gerät im Netzwerk erreichbar.
+Nach dem Neustart startet der Browser automatisch im Kiosk-Modus mit dem Timer-Display. Die Web-Steuerung ist unter `http://<Pi-IP>/control` von jedem Gerät im Netzwerk erreichbar.
 
 ## Funktionen
 
