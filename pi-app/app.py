@@ -10,12 +10,16 @@ Speech Timer für Raspberry Pi 4 – v3
 """
 
 import json
+import logging
 import os
+import re
 import subprocess
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO, emit
@@ -51,6 +55,11 @@ DEFAULT_CONFIG = {
         "enabled": False,
         "receive_port": 8000,
         "targets": [],
+    },
+    "ap": {
+        "ssid": "SpeechTimer",
+        "password": "speechtimer",
+        "auto_start": True,
     },
 }
 
@@ -881,6 +890,203 @@ def parse_iwlist(output):
             unique.append(n)
     unique.sort(key=lambda x: x["quality"], reverse=True)
     return unique
+
+
+def _detect_network_manager():
+    """True wenn NetworkManager aktiv ist (Bookworm+)."""
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", "NetworkManager"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() == "active"
+    except Exception:
+        return False
+
+
+def _get_eth0_conn_name():
+    """Gibt den nmcli-Connection-Namen für eth0 zurück oder None."""
+    result = subprocess.run(
+        ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
+        capture_output=True, text=True, timeout=5
+    )
+    for line in result.stdout.strip().splitlines():
+        parts = line.split(":")
+        if len(parts) >= 2 and parts[1] == "eth0":
+            return parts[0]
+    return None
+
+
+def _read_eth0_nmcli():
+    """Liest eth0-Konfiguration via nmcli."""
+    conn = _get_eth0_conn_name()
+    base = {"mode": "dhcp", "ip": "", "prefix": 24, "gateway": "", "dns": "",
+            "backend": "networkmanager"}
+    if not conn:
+        base["error"] = "Keine aktive eth0-Connection gefunden"
+        return base
+    result = subprocess.run(
+        ["nmcli", "-t", "connection", "show", conn],
+        capture_output=True, text=True, timeout=5
+    )
+    for line in result.stdout.splitlines():
+        if ":" not in line:
+            continue
+        key, _, val = line.partition(":")
+        key = key.strip()
+        val = val.strip()
+        if key == "ipv4.method":
+            base["mode"] = "dhcp" if val == "auto" else "static"
+        elif key == "IP4.ADDRESS[1]" and "/" in val:
+            ip, prefix = val.rsplit("/", 1)
+            base["ip"] = ip.strip()
+            try:
+                base["prefix"] = int(prefix.strip())
+            except ValueError:
+                pass
+        elif key == "IP4.GATEWAY":
+            base["gateway"] = val
+        elif key == "IP4.DNS[1]":
+            base["dns"] = val
+    return base
+
+
+def _read_eth0_dhcpcd():
+    """Liest eth0-Konfiguration aus /etc/dhcpcd.conf."""
+    cfg = {"mode": "dhcp", "ip": "", "prefix": 24, "gateway": "", "dns": "",
+           "backend": "dhcpcd"}
+    try:
+        content = Path("/etc/dhcpcd.conf").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return cfg
+    match = re.search(
+        r"# speech-timer-start\n(.*?)# speech-timer-end",
+        content, re.DOTALL
+    )
+    if not match:
+        return cfg
+    for line in match.group(1).splitlines():
+        line = line.strip()
+        if line.startswith("static ip_address="):
+            addr = line.split("=", 1)[1].strip()
+            if "/" in addr:
+                ip, prefix = addr.rsplit("/", 1)
+                cfg["ip"] = ip
+                try:
+                    cfg["prefix"] = int(prefix)
+                except ValueError:
+                    pass
+            cfg["mode"] = "static"
+        elif line.startswith("static routers="):
+            cfg["gateway"] = line.split("=", 1)[1].strip()
+        elif line.startswith("static domain_name_servers="):
+            cfg["dns"] = line.split("=", 1)[1].strip()
+    return cfg
+
+
+def _apply_eth0_nmcli(conn, mode, ip="", prefix=24, gateway="", dns=""):
+    """Wendet eth0-Konfiguration via nmcli an. Gibt (ok, stderr) zurück."""
+    if mode == "dhcp":
+        cmd = ["sudo", "nmcli", "connection", "modify", conn,
+               "ipv4.method", "auto",
+               "ipv4.addresses", "",
+               "ipv4.gateway", "",
+               "ipv4.dns", ""]
+    else:
+        cmd = ["sudo", "nmcli", "connection", "modify", conn,
+               "ipv4.method", "manual",
+               "ipv4.addresses", f"{ip}/{prefix}",
+               "ipv4.gateway", gateway,
+               "ipv4.dns", dns or "8.8.8.8"]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+    if r.returncode != 0:
+        return False, r.stderr
+    r = subprocess.run(
+        ["sudo", "nmcli", "connection", "up", conn],
+        capture_output=True, text=True, timeout=15
+    )
+    return r.returncode == 0, r.stderr
+
+
+def _apply_eth0_dhcpcd(mode, ip="", prefix=24, gateway="", dns=""):
+    """Wendet eth0-Konfiguration via dhcpcd.conf an. Gibt (ok, stderr) zurück."""
+    try:
+        content = Path("/etc/dhcpcd.conf").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        content = ""
+    content = re.sub(
+        r"\n?# speech-timer-start\n.*?# speech-timer-end\n?",
+        "",
+        content,
+        flags=re.DOTALL
+    )
+    if mode == "static":
+        block = (
+            f"\n# speech-timer-start\n"
+            f"interface eth0\n"
+            f"static ip_address={ip}/{prefix}\n"
+            f"static routers={gateway}\n"
+            f"static domain_name_servers={dns or '8.8.8.8'}\n"
+            f"# speech-timer-end\n"
+        )
+        content = content.rstrip() + block
+    r = subprocess.run(
+        ["sudo", "tee", "/etc/dhcpcd.conf"],
+        input=content, text=True, capture_output=True, timeout=5
+    )
+    if r.returncode != 0:
+        return False, r.stderr
+    r = subprocess.run(
+        ["sudo", "systemctl", "restart", "dhcpcd"],
+        capture_output=True, text=True, timeout=15
+    )
+    return r.returncode == 0, r.stderr
+
+
+def _get_ap_running():
+    """True wenn ein nmcli-Hotspot auf wlan0 aktiv ist."""
+    try:
+        r = subprocess.run(
+            ["nmcli", "-t", "-f", "NAME,DEVICE,STATE", "connection", "show", "--active"],
+            capture_output=True, text=True, timeout=5
+        )
+        return any(
+            line.startswith("Hotspot:wlan0") and "activated" in line
+            for line in r.stdout.splitlines()
+        )
+    except Exception:
+        return False
+
+
+def _get_ap_ip():
+    """Gibt die IP-Adresse von wlan0 zurück (AP-IP wenn Hotspot läuft)."""
+    try:
+        r = subprocess.run(
+            ["ip", "-4", "addr", "show", "wlan0"],
+            capture_output=True, text=True, timeout=5
+        )
+        match = re.search(r"inet (\d+\.\d+\.\d+\.\d+)", r.stdout)
+        return match.group(1) if match else ""
+    except Exception:
+        return ""
+
+
+def _start_ap(ssid, password):
+    """Startet nmcli-Hotspot auf wlan0. Gibt (ok, stderr) zurück."""
+    r = subprocess.run(
+        ["sudo", "nmcli", "device", "wifi", "hotspot",
+         "ifname", "wlan0", "ssid", ssid, "password", password],
+        capture_output=True, text=True, timeout=25
+    )
+    return r.returncode == 0, r.stderr
+
+
+def _stop_ap():
+    """Stoppt und löscht den nmcli-Hotspot."""
+    subprocess.run(["sudo", "nmcli", "connection", "down", "Hotspot"],
+                   capture_output=True, timeout=10)
+    subprocess.run(["sudo", "nmcli", "connection", "delete", "Hotspot"],
+                   capture_output=True, timeout=10)
 
 
 @socketio.on('connect')
