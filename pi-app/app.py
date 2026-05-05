@@ -723,6 +723,51 @@ def api_network_connect():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/api/network/eth0', methods=['GET'])
+def api_get_eth0():
+    """Liest aktuelle eth0-Konfiguration (DHCP oder statisch)."""
+    try:
+        if _detect_network_manager():
+            return jsonify(_read_eth0_nmcli())
+        else:
+            return jsonify(_read_eth0_dhcpcd())
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/network/eth0', methods=['POST'])
+def api_set_eth0():
+    """Setzt eth0 auf DHCP oder statische IP."""
+    data = request.get_json()
+    mode = data.get("mode", "dhcp")
+    if mode not in ("dhcp", "static"):
+        return jsonify({"status": "error", "message": "Ungültiger Mode"}), 400
+    ip = data.get("ip", "").strip()
+    prefix = int(data.get("prefix", 24))
+    gateway = data.get("gateway", "").strip()
+    dns = data.get("dns", "8.8.8.8").strip()
+
+    if mode == "static" and (not ip or not gateway):
+        return jsonify({"status": "error",
+                        "message": "IP-Adresse und Gateway sind Pflichtfelder"}), 400
+
+    try:
+        if _detect_network_manager():
+            conn = _get_eth0_conn_name()
+            if not conn:
+                return jsonify({"status": "error",
+                                "message": "Keine aktive eth0-Connection gefunden"}), 400
+            ok, err = _apply_eth0_nmcli(conn, mode, ip, prefix, gateway, dns)
+        else:
+            ok, err = _apply_eth0_dhcpcd(mode, ip, prefix, gateway, dns)
+
+        if ok:
+            return jsonify({"status": "ok"})
+        return jsonify({"status": "error", "message": err or "Unbekannter Fehler"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 # ============================================================
 # Helpers
 # ============================================================
