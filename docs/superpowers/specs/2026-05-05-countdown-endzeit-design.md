@@ -37,7 +37,18 @@ In `ButtonRenderer.render_timer()` wird die unterste Textzeile (Phase-Label) ers
 - **Wenn `end_time` vorhanden** (läuft oder pausiert): untere Zeile zeigt `END HH:MM` (die letzten 5 Zeichen von `end_time`, also ohne Sekunden, wegen begrenztem Platz)
 - **Sonst** (idle, loaded, stopped, overtime): bisheriges Verhalten (`READY`, `LOADED`, `STOPPED`, `OVER!`)
 
-Die `timer_component`-Buttons (H/MIN/S auf dem XL-Deck) bleiben unverändert.
+Die `timer_component`-Buttons (H/MIN/S auf dem XL-Deck) blinken ebenfalls (siehe Blinken-Abschnitt).
+
+### Stream Deck – Blinken
+
+Der `timer_display`-Button und alle `timer_component`-Buttons blinken, wenn die Phase `warning2` oder `overtime` ist — analog zur Web-Display-Ansicht.
+
+**Implementierung:**
+- `StreamDeckController` bekommt `_blink_visible: bool` und `_last_blink_toggle: float`
+- Im `run_loop`: Toggle alle 0,5s (warning2) bzw. 0,25s (overtime)
+- Beim Rendern: wenn `_blink_visible = False` → `render_blank()` statt normalem Inhalt
+- Blink-Config (`blink_on_warning`, `blink_on_overtime`) wird im Meta-Poll (alle 5s) via `/api/display` geladen und im Controller gespeichert
+- Wenn `blink_on_warning = False`: kein Blinken bei `warning2`; wenn `blink_on_overtime = False`: kein Blinken bei `overtime`
 
 ### Weboberfläche
 
@@ -60,14 +71,22 @@ if (data.end_time) {
 } else {
   endDisplay.style.display = 'none';
 }
+// Blinken: gleiche Logik wie timer-preview
+endDisplay.classList.remove('blinking', 'blinking-fast');
+if (data.phase === 'warning2' && blinkOnWarning) endDisplay.classList.add('blinking');
+if (data.phase === 'overtime' && blinkOnOvertime) endDisplay.classList.add('blinking-fast');
 ```
 
-**CSS** (`control.css`): Neue Klasse `.end-time-hint` — kleine, dezente Schrift unterhalb der Timer-Zahl.
+Die `blink_on_warning`/`blink_on_overtime`-Werte werden beim `display_config_update`-Event aktualisiert (bereits in `control.js` verfügbar machen via `/api/display`-Fetch beim Start). Blink-Klassen werden auf `#timer-preview` **und** `#end-time-display` angewendet.
+
+**CSS** (`control.css`):
+- Neue Klasse `.end-time-hint` — kleine, dezente Schrift unterhalb der Timer-Zahl
+- `@keyframes blink` und `@keyframes blink-fast` analog zu `display.css` ergänzen
+- Regeln für `#timer-preview.blinking`, `#timer-preview.blinking-fast`, `#end-time-display.blinking`, `#end-time-display.blinking-fast`
 
 ## Nicht im Scope
 
 - `display.html` (Publikums-Display) — nur Steuerungsseite und Stream Deck
-- `timer_component`-Buttons (XL-Deck) — nur `timer_display`
 - Neuer Stream-Deck-Button-Typ — kein Layout-Eingriff nötig
 
 ## Fehlerverhalten
