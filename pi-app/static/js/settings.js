@@ -26,7 +26,11 @@
             if (panel) panel.classList.add('active');
 
             // Lazy-Load: Netzwerk-Status laden, wenn Tab geöffnet wird
-            if (btn.dataset.tab === 'network') loadNetworkStatus();
+            if (btn.dataset.tab === 'network') {
+                loadNetworkStatus();
+                loadEth0Config();
+                loadApConfig();
+            }
             if (btn.dataset.tab === 'osc') loadOscConfig();
             if (btn.dataset.tab === 'time') updateCurrentTime();
             if (btn.dataset.tab === 'presets') loadPresetsEditor();
@@ -427,6 +431,167 @@
                 showToast('Test gesendet an: ' + (data.sent_to || []).join(', '), 'success');
             } else {
                 showToast(data.message || 'Test fehlgeschlagen', 'warning');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    // ============ LAN (eth0) ============
+    async function loadEth0Config() {
+        const loading = document.getElementById('eth0-loading');
+        const configEl = document.getElementById('eth0-config');
+        const unavailable = document.getElementById('eth0-unavailable');
+        try {
+            const res = await fetch('/api/network/eth0');
+            const data = await res.json();
+            loading.classList.add('hidden');
+            if (data.error) {
+                unavailable.classList.remove('hidden');
+                return;
+            }
+            configEl.classList.remove('hidden');
+            const mode = data.mode || 'dhcp';
+            const radio = document.querySelector(`input[name="eth0-mode"][value="${mode}"]`);
+            if (radio) radio.checked = true;
+            document.getElementById('eth0-static-fields').classList.toggle('hidden', mode !== 'static');
+            document.getElementById('eth0-ip').value = data.ip || '';
+            const prefixEl = document.getElementById('eth0-prefix');
+            if (prefixEl) prefixEl.value = String(data.prefix || 24);
+            document.getElementById('eth0-gateway').value = data.gateway || '';
+            document.getElementById('eth0-dns').value = data.dns || '';
+        } catch (e) {
+            if (loading) loading.classList.add('hidden');
+            if (unavailable) unavailable.classList.remove('hidden');
+        }
+    }
+
+    document.querySelectorAll('input[name="eth0-mode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            document.getElementById('eth0-static-fields').classList.toggle(
+                'hidden', radio.value !== 'static'
+            );
+        });
+    });
+
+    document.getElementById('btn-save-eth0').addEventListener('click', async () => {
+        const modeEl = document.querySelector('input[name="eth0-mode"]:checked');
+        if (!modeEl) return;
+        const mode = modeEl.value;
+        const payload = { mode };
+        if (mode === 'static') {
+            payload.ip = document.getElementById('eth0-ip').value.trim();
+            payload.prefix = parseInt(document.getElementById('eth0-prefix').value, 10);
+            payload.gateway = document.getElementById('eth0-gateway').value.trim();
+            payload.dns = document.getElementById('eth0-dns').value.trim() || '8.8.8.8';
+            if (!payload.ip || !payload.gateway) {
+                showToast('IP-Adresse und Gateway sind Pflichtfelder', 'error');
+                return;
+            }
+        }
+        try {
+            const res = await fetch('/api/network/eth0', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast('LAN-Konfiguration gespeichert', 'success');
+            } else {
+                showToast('Fehler: ' + (data.message || 'unbekannt'), 'error');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    // ============ Fallback-AP ============
+    function updateApStatus(running, ip) {
+        const badge = document.getElementById('ap-status-badge');
+        const ipEl = document.getElementById('ap-ip');
+        const btnStart = document.getElementById('btn-start-ap');
+        const btnStop = document.getElementById('btn-stop-ap');
+        if (!badge) return;
+        if (running) {
+            badge.className = 'ap-badge ap-badge-active';
+            badge.textContent = 'Hotspot aktiv';
+            if (ipEl) ipEl.textContent = ip || '';
+            if (btnStart) btnStart.style.display = 'none';
+            if (btnStop) btnStop.style.display = '';
+        } else {
+            badge.className = 'ap-badge ap-badge-inactive';
+            badge.textContent = 'Inaktiv';
+            if (ipEl) ipEl.textContent = '';
+            if (btnStart) btnStart.style.display = '';
+            if (btnStop) btnStop.style.display = 'none';
+        }
+    }
+
+    async function loadApConfig() {
+        try {
+            const res = await fetch('/api/network/ap');
+            const data = await res.json();
+            const unavailable = document.getElementById('ap-unavailable');
+            const configSection = document.getElementById('ap-config-section');
+            if (!data.nm_available) {
+                if (unavailable) unavailable.classList.remove('hidden');
+                if (configSection) configSection.classList.add('hidden');
+                return;
+            }
+            document.getElementById('ap-ssid').value = data.ssid || 'SpeechTimer';
+            document.getElementById('ap-password').value = data.password || 'speechtimer';
+            document.getElementById('ap-auto-start').checked = !!data.auto_start;
+            updateApStatus(data.running, data.ip);
+        } catch (e) {
+            showToast('AP-Status nicht abrufbar', 'error');
+        }
+    }
+
+    document.getElementById('btn-save-ap').addEventListener('click', async () => {
+        const ssid = document.getElementById('ap-ssid').value.trim();
+        const password = document.getElementById('ap-password').value;
+        const autoStart = document.getElementById('ap-auto-start').checked;
+        if (!ssid) { showToast('SSID darf nicht leer sein', 'error'); return; }
+        if (password.length < 8) { showToast('Passwort muss mind. 8 Zeichen haben', 'error'); return; }
+        try {
+            const res = await fetch('/api/network/ap/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ssid, password, auto_start: autoStart }),
+            });
+            const data = await res.json();
+            if (data.status === 'ok') showToast('Hotspot-Einstellungen gespeichert', 'success');
+            else showToast('Fehler: ' + (data.message || ''), 'error');
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-start-ap').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/network/ap/start', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                updateApStatus(true, data.ip);
+                showToast('Hotspot gestartet', 'success');
+            } else {
+                showToast('Fehler: ' + (data.message || ''), 'error');
+            }
+        } catch (e) {
+            showToast('Fehler: ' + e.message, 'error');
+        }
+    });
+
+    document.getElementById('btn-stop-ap').addEventListener('click', async () => {
+        try {
+            const res = await fetch('/api/network/ap/stop', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                updateApStatus(false, '');
+                showToast('Hotspot gestoppt', 'success');
+            } else {
+                showToast('Fehler: ' + (data.message || ''), 'error');
             }
         } catch (e) {
             showToast('Fehler: ' + e.message, 'error');
