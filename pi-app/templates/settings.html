@@ -166,6 +166,89 @@
                     </div>
                 </div>
             </div>
+
+            <!-- LAN (eth0) -->
+            <div class="card" id="card-eth0">
+                <h2>LAN (eth0)</h2>
+                <div id="eth0-loading">Lade...</div>
+                <div id="eth0-config" class="hidden">
+                    <div class="form-row">
+                        <label>Konfiguration</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="eth0-mode" value="dhcp"> DHCP (automatisch)</label>
+                            <label><input type="radio" name="eth0-mode" value="static"> Statische IP</label>
+                        </div>
+                    </div>
+                    <div id="eth0-static-fields" class="hidden">
+                        <div class="form-row">
+                            <label for="eth0-ip">IP-Adresse</label>
+                            <input type="text" id="eth0-ip" placeholder="z.B. 192.168.1.100">
+                        </div>
+                        <div class="form-row">
+                            <label for="eth0-prefix">Subnetzmaske</label>
+                            <select id="eth0-prefix">
+                                <option value="8">/8 — 255.0.0.0</option>
+                                <option value="16">/16 — 255.255.0.0</option>
+                                <option value="24" selected>/24 — 255.255.255.0</option>
+                                <option value="25">/25 — 255.255.255.128</option>
+                                <option value="26">/26 — 255.255.255.192</option>
+                                <option value="28">/28 — 255.255.255.240</option>
+                                <option value="29">/29 — 255.255.255.248</option>
+                                <option value="30">/30 — 255.255.255.252</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="eth0-gateway">Gateway</label>
+                            <input type="text" id="eth0-gateway" placeholder="z.B. 192.168.1.1">
+                        </div>
+                        <div class="form-row">
+                            <label for="eth0-dns">DNS</label>
+                            <input type="text" id="eth0-dns" placeholder="z.B. 8.8.8.8">
+                        </div>
+                    </div>
+                    <div class="info-box">ℹ️ Änderungen trennen kurz die LAN-Verbindung.</div>
+                    <button id="btn-save-eth0" class="btn btn-primary" style="margin-top:1rem;">LAN-Konfiguration speichern</button>
+                </div>
+                <div id="eth0-unavailable" class="hidden info-box">
+                    ⚠️ eth0 nicht verfügbar oder NetworkManager/dhcpcd nicht erkannt.
+                </div>
+            </div>
+
+            <!-- Fallback WLAN-Hotspot -->
+            <div class="card" id="card-ap">
+                <h2>Fallback WLAN-Hotspot</h2>
+                <p style="color:var(--color-secondary);margin-bottom:1rem;">
+                    Startet automatisch einen WLAN-Hotspot, wenn beim Booten kein bekanntes WLAN erreichbar ist.
+                </p>
+                <div id="ap-unavailable" class="hidden info-box">
+                    ⚠️ NetworkManager nicht gefunden — Hotspot-Funktion nicht verfügbar.
+                </div>
+                <div id="ap-config-section">
+                    <div class="form-row">
+                        <label for="ap-ssid">SSID (Netzwerkname)</label>
+                        <input type="text" id="ap-ssid" placeholder="SpeechTimer">
+                    </div>
+                    <div class="form-row">
+                        <label for="ap-password">Passwort (min. 8 Zeichen)</label>
+                        <input type="password" id="ap-password" placeholder="speechtimer">
+                    </div>
+                    <div class="checkbox-row" style="margin-bottom:1rem;">
+                        <label>
+                            <input type="checkbox" id="ap-auto-start" checked>
+                            Automatisch starten wenn kein WLAN erreichbar
+                        </label>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <span id="ap-status-badge" class="ap-badge ap-badge-inactive">Inaktiv</span>
+                        <span id="ap-ip" style="margin-left:0.5rem;color:var(--color-secondary);font-family:monospace;font-size:0.9rem;"></span>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                        <button id="btn-save-ap" class="btn btn-secondary">Einstellungen speichern</button>
+                        <button id="btn-start-ap" class="btn btn-primary">Hotspot starten</button>
+                        <button id="btn-stop-ap" class="btn btn-secondary" style="display:none;">Hotspot stoppen</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- OSC-Einstellungen -->
