@@ -162,6 +162,11 @@ echo "[3/6] Setze Script-Berechtigungen..."
 chmod +x scripts/kiosk.sh
 chmod +x scripts/install.sh
 
+# Port 80 ohne root: Python3 darf privilegierte Ports binden
+PYTHON3_BIN="$(readlink -f "$(which python3)")"
+sudo setcap 'cap_net_bind_service=+ep' "$PYTHON3_BIN"
+echo "  -> cap_net_bind_service gesetzt für $PYTHON3_BIN (Port 80)"
+
 # ============================================================
 # 3b. WLAN-Land setzen (verhindert rfkill-Block des Interfaces)
 # ============================================================
@@ -271,9 +276,9 @@ echo "==================================="
 echo ""
 echo "Der Speech Timer Service läuft jetzt."
 echo ""
-echo "Display:    http://$IP:5000/"
-echo "Steuerung:  http://$IP:5000/control"
-echo "Einstell.:  http://$IP:5000/settings"
+echo "Display:    http://$IP/"
+echo "Steuerung:  http://$IP/control"
+echo "Einstell.:  http://$IP/settings"
 echo ""
 echo "Beim nächsten Neustart öffnet sich der"
 echo "Browser automatisch im Kiosk-Modus."

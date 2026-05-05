@@ -23,7 +23,7 @@ fi
 # Warte bis die Flask-App erreichbar ist
 MAX_WAIT=60
 COUNT=0
-while ! curl -s http://localhost:5000/ > /dev/null; do
+while ! curl -s http://localhost:80/ > /dev/null; do
     sleep 1
     COUNT=$((COUNT + 1))
     if [ $COUNT -ge $MAX_WAIT ]; then
@@ -68,4 +68,4 @@ sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' \
     --autoplay-policy=no-user-gesture-required \
     --incognito \
     $PLATFORM_FLAGS \
-    http://localhost:5000/
+    http://localhost:80/
