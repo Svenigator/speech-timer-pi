@@ -159,16 +159,13 @@ class TimerController:
             self.state["overtime"] = False
 
     def reset(self):
-        """Stoppt den Timer und entlädt das Preset komplett."""
+        """Stoppt den Timer und setzt auf die ursprüngliche Startzeit zurück (Preset bleibt geladen)."""
         with self.lock:
             self.state["running"] = False
             self.state["paused"] = False
             self.state["stopped"] = False
+            self.state["start_time"] = None
             self.state["elapsed"] = 0
-            self.state["duration"] = 0
-            self.state["warning1"] = 0
-            self.state["warning2"] = 0
-            self.state["preset_name"] = ""
             self.state["overtime"] = False
 
     def adjust_time(self, seconds):
