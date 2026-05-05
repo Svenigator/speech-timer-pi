@@ -315,6 +315,44 @@ def timer_loop():
         socketio.sleep(0.1)
 
 
+def ap_monitor_thread():
+    """
+    Startet 15s nach App-Beginn den Fallback-AP wenn kein WLAN verbunden ist.
+    Überwacht danach alle 30s den AP-Status (Sync mit tatsächlichem Zustand).
+    """
+    socketio.sleep(15)
+
+    config = load_config()
+    ap_cfg = config.get("ap", {})
+
+    ap_started_by_us = _get_ap_running()  # AP lief evtl. schon vor dem Restart
+
+    if not ap_started_by_us and ap_cfg.get("auto_start", True):
+        try:
+            result = subprocess.run(
+                ["iwgetid", "-r"], capture_output=True, text=True, timeout=5
+            )
+            ssid = result.stdout.strip()
+        except Exception:
+            ssid = ""
+
+        if not ssid:
+            ok, err = _start_ap(
+                ap_cfg.get("ssid", "SpeechTimer"),
+                ap_cfg.get("password", "speechtimer")
+            )
+            if ok:
+                ap_started_by_us = True
+            else:
+                log.warning(f"Fallback-AP konnte nicht gestartet werden: {err}")
+
+    while True:
+        socketio.sleep(30)
+        if ap_started_by_us and not _get_ap_running():
+            # AP wurde extern gestoppt — Zustand synchronisieren
+            ap_started_by_us = False
+
+
 # ============================================================
 # Routes
 # ============================================================
@@ -1218,4 +1256,5 @@ if __name__ == '__main__':
     config = load_config()
     apply_osc_config(config["osc"])
     socketio.start_background_task(timer_loop)
+    socketio.start_background_task(ap_monitor_thread)
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
