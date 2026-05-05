@@ -22,6 +22,8 @@
     let timerPaused = false;
     let timerStopped = false;
     let currentPresetName = '';
+    let blinkOnWarning = (window.initialBlink || {}).blink_on_warning !== false;
+    let blinkOnOvertime = (window.initialBlink || {}).blink_on_overtime !== false;
 
     function showToast(msg, type = 'success') {
         const toast = document.getElementById('toast');
@@ -251,6 +253,27 @@
             renderPresets();
         }
 
+        // Endzeit anzeigen
+        const endDisplay = document.getElementById('end-time-display');
+        const endValue = document.getElementById('end-time-value');
+        if (data.end_time) {
+            endValue.textContent = data.end_time;
+            endDisplay.style.display = '';
+        } else {
+            endDisplay.style.display = 'none';
+        }
+
+        // Blinken auf timer-preview und end-time-display
+        timerPreview.classList.remove('blinking', 'blinking-fast');
+        endDisplay.classList.remove('blinking', 'blinking-fast');
+        if (data.phase === 'warning2' && blinkOnWarning) {
+            timerPreview.classList.add('blinking');
+            endDisplay.classList.add('blinking');
+        } else if (data.phase === 'overtime' && blinkOnOvertime) {
+            timerPreview.classList.add('blinking-fast');
+            endDisplay.classList.add('blinking-fast');
+        }
+
         updateButtons();
     });
 
@@ -259,6 +282,8 @@
             currentMode = cfg.mode;
             updateModeButton();
         }
+        if (typeof cfg.blink_on_warning === 'boolean') blinkOnWarning = cfg.blink_on_warning;
+        if (typeof cfg.blink_on_overtime === 'boolean') blinkOnOvertime = cfg.blink_on_overtime;
     });
 
     renderPresets();
