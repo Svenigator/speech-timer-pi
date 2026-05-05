@@ -7,6 +7,8 @@
     const currentPreset = document.getElementById('current-preset');
     const currentStatus = document.getElementById('current-status');
     const presetsList = document.getElementById('presets-list');
+    const endDisplay = document.getElementById('end-time-display');
+    const endValue = document.getElementById('end-time-value');
 
     const btnStart = document.getElementById('btn-start');
     const btnPause = document.getElementById('btn-pause');
@@ -254,24 +256,24 @@
         }
 
         // Endzeit anzeigen
-        const endDisplay = document.getElementById('end-time-display');
-        const endValue = document.getElementById('end-time-value');
-        if (data.end_time) {
-            endValue.textContent = data.end_time;
-            endDisplay.style.display = '';
-        } else {
-            endDisplay.style.display = 'none';
-        }
+        if (endDisplay) {
+            if (data.end_time) {
+                endValue.textContent = data.end_time;
+                endDisplay.style.display = '';
+            } else {
+                endDisplay.style.display = 'none';
+            }
 
-        // Blinken auf timer-preview und end-time-display
-        timerPreview.classList.remove('blinking', 'blinking-fast');
-        endDisplay.classList.remove('blinking', 'blinking-fast');
-        if (data.phase === 'warning2' && blinkOnWarning) {
-            timerPreview.classList.add('blinking');
-            endDisplay.classList.add('blinking');
-        } else if (data.phase === 'overtime' && blinkOnOvertime) {
-            timerPreview.classList.add('blinking-fast');
-            endDisplay.classList.add('blinking-fast');
+            // Blinken auf timer-preview und end-time-display
+            timerPreview.classList.remove('blinking', 'blinking-fast');
+            endDisplay.classList.remove('blinking', 'blinking-fast');
+            if (data.phase === 'warning2' && blinkOnWarning) {
+                timerPreview.classList.add('blinking');
+                endDisplay.classList.add('blinking');
+            } else if (data.phase === 'overtime' && blinkOnOvertime) {
+                timerPreview.classList.add('blinking-fast');
+                endDisplay.classList.add('blinking-fast');
+            }
         }
 
         updateButtons();
