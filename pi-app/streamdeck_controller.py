@@ -290,6 +290,7 @@ class ButtonRenderer:
     def render_timer(self, state):
         phase = state.get("phase", "idle")
         bg = get_phase_color(phase)
+        end_time = state.get("end_time", "")
 
         def draw(d, img):
             w, h = img.size
@@ -300,24 +301,26 @@ class ButtonRenderer:
             else:
                 text = format_time(state.get("remaining", 0))
 
-            # Font dynamisch verkleinern bei langen Strings (HH:MM:SS)
             font_size = FONT_LARGE_SIZE if len(text) <= 6 else FONT_MEDIUM_SIZE + 4
             self._draw_centered_text(
                 d, text, (w // 2, h // 2 - 6),
                 self._get_font(font_size), COLOR_TEXT
             )
-            phase_label = {
-                "normal": "RUNNING",
-                "warning1": "WARN 1",
-                "warning2": "WARN 2",
-                "overtime": "OVER!",
-                "paused": "PAUSED",
-                "stopped": "STOPPED",
-                "idle": "READY",
-                "loaded": "LOADED",
-            }.get(phase, phase.upper())
+            if end_time:
+                bottom_label = "END " + end_time[:5]  # "HH:MM" aus "HH:MM:SS"
+            else:
+                bottom_label = {
+                    "normal": "RUNNING",
+                    "warning1": "WARN 1",
+                    "warning2": "WARN 2",
+                    "overtime": "OVER!",
+                    "paused": "PAUSED",
+                    "stopped": "STOPPED",
+                    "idle": "READY",
+                    "loaded": "LOADED",
+                }.get(phase, phase.upper())
             self._draw_centered_text(
-                d, phase_label, (w // 2, h - 16),
+                d, bottom_label, (w // 2, h - 16),
                 self._get_font(FONT_SMALL_SIZE), COLOR_TEXT
             )
 
