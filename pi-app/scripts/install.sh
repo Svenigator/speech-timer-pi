@@ -163,6 +163,24 @@ chmod +x scripts/kiosk.sh
 chmod +x scripts/install.sh
 
 # ============================================================
+# 3b. WLAN-Land setzen (verhindert rfkill-Block des Interfaces)
+# ============================================================
+echo "[3b/6] Setze WLAN-Regulatory-Domain..."
+if command -v raspi-config > /dev/null 2>&1; then
+    CURRENT_COUNTRY=$(grep -o 'cfg80211.ieee80211_regdom=[A-Z]*' /boot/firmware/cmdline.txt 2>/dev/null | cut -d= -f2 || true)
+    if [ -z "$CURRENT_COUNTRY" ]; then
+        sudo raspi-config nonint do_wifi_country DE
+        echo "  -> WLAN-Land auf DE gesetzt (kann in raspi-config geändert werden)"
+    else
+        echo "  -> WLAN-Land bereits gesetzt: $CURRENT_COUNTRY"
+    fi
+    sudo rfkill unblock wifi 2>/dev/null || true
+else
+    echo "  !! raspi-config nicht gefunden – WLAN-Land bitte manuell setzen:"
+    echo "     sudo raspi-config  →  Localisation Options → WLAN Country"
+fi
+
+# ============================================================
 # 4. Sudoers-Eintrag für systemrelevante Befehle
 # ============================================================
 echo "[4/6] Konfiguriere sudo-Rechte..."
