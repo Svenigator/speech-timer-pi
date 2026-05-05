@@ -20,7 +20,10 @@
     <main>
         <!-- Status-Karte -->
         <section class="card status-card">
-            <div class="timer-preview" id="timer-preview">00:00</div>
+            <div class="timer-main">
+                <div class="timer-preview" id="timer-preview">00:00</div>
+                <div id="end-time-display" class="end-time-hint" style="display:none">Ende: <span id="end-time-value"></span></div>
+            </div>
             <div class="status-info">
                 <div><strong>Vorlage:</strong> <span id="current-preset">—</span></div>
                 <div><strong>Status:</strong> <span id="current-status">Bereit</span></div>
@@ -88,6 +91,10 @@
     <script>
         window.initialPresets = {{ config.presets | tojson }};
         window.initialMode = {{ config.display.mode | tojson }};
+        window.initialBlink = {
+            blink_on_warning: {{ config.system.blink_on_warning | tojson }},
+            blink_on_overtime: {{ config.system.blink_on_overtime | tojson }}
+        };
     </script>
     <script src="{{ url_for('static', filename='js/control.js') }}"></script>
 </body>

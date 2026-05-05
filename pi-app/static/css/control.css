@@ -115,14 +115,27 @@ main {
     flex-wrap: wrap;
 }
 
+.timer-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 180px;
+    text-align: center;
+}
+
 .timer-preview {
     font-size: 3.5rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--color-text);
-    min-width: 180px;
-    text-align: center;
     transition: color 0.2s ease;
+}
+
+.end-time-hint {
+    font-size: 0.9rem;
+    color: var(--color-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-top: 0.25rem;
 }
 
 .status-info {
@@ -276,6 +289,27 @@ main {
 .toast.error { background: var(--color-danger); }
 .toast.warning { background: var(--color-warning); }
 .toast.success { background: var(--color-success); }
+
+/* Blink-Animationen (analog zu display.css) */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes blink-fast {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+}
+
+.timer-preview.blinking,
+.end-time-hint.blinking {
+    animation: blink 1s ease-in-out infinite;
+}
+
+.timer-preview.blinking-fast,
+.end-time-hint.blinking-fast {
+    animation: blink-fast 0.4s ease-in-out infinite;
+}
 
 @media (max-width: 640px) {
     header { padding: 1rem; }
