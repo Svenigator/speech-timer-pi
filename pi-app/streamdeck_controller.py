@@ -492,12 +492,13 @@ class ButtonRenderer:
 
             # Hostname oder anderes - mit dynamischer Schriftgrößen-Anpassung
             font_size = FONT_MEDIUM_SIZE
-            if len(value) > 12:
+            display_value = value
+            if len(display_value) > 12:
                 font_size = FONT_SMALL_SIZE + 2
-            if len(value) > 16:
-                value = value[:15] + "."
+            if len(display_value) > 16:
+                display_value = display_value[:15] + "."
             self._draw_centered_text(
-                d, value, (w // 2, h // 2 + 6),
+                d, display_value, (w // 2, h // 2 + 6),
                 self._get_font(font_size), COLOR_TEXT
             )
 
@@ -640,11 +641,8 @@ class StreamDeckController:
         if self._last_render.get(key) is image:
             return
         with self.lock:
-            try:
-                self.deck.set_key_image(key, image)
-                self._last_render[key] = image
-            except Exception as e:
-                log.warning(f"set_key_image({key}) fehlgeschlagen: {e}")
+            self.deck.set_key_image(key, image)
+            self._last_render[key] = image
 
     def update_all_keys(self):
         for key in range(self.deck.key_count()):
@@ -677,9 +675,10 @@ class StreamDeckController:
                                                      self._find_ip("wlan0", "wifi"))
                 else:
                     img = self.renderer.render_blank()
-                self._render_key(key, img)
             except Exception as e:
                 log.error(f"Render-Fehler Key {key}: {e}")
+                continue
+            self._render_key(key, img)  # USB-Fehler propagieren nach oben
 
     def _find_ip(self, name, type_):
         for iface in self.network.get("interfaces", []):
@@ -713,7 +712,11 @@ class StreamDeckController:
                     self.network = network
                 last_meta = now
 
-            self.update_all_keys()
+            try:
+                self.update_all_keys()
+            except Exception as e:
+                log.error(f"Stream Deck nicht mehr erreichbar: {e}")
+                break
             time.sleep(0.1)
 
     def stop(self):
