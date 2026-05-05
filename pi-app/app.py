@@ -906,14 +906,17 @@ def _detect_network_manager():
 
 def _get_eth0_conn_name():
     """Gibt den nmcli-Connection-Namen für eth0 zurück oder None."""
-    result = subprocess.run(
-        ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
-        capture_output=True, text=True, timeout=5
-    )
-    for line in result.stdout.strip().splitlines():
-        parts = line.split(":")
-        if len(parts) >= 2 and parts[1] == "eth0":
-            return parts[0]
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "-f", "NAME,DEVICE", "connection", "show", "--active"],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.strip().splitlines():
+            parts = line.split(":")
+            if len(parts) >= 2 and parts[1] == "eth0":
+                return parts[0]
+    except Exception:
+        pass
     return None
 
 
@@ -925,29 +928,32 @@ def _read_eth0_nmcli():
     if not conn:
         base["error"] = "Keine aktive eth0-Connection gefunden"
         return base
-    result = subprocess.run(
-        ["nmcli", "-t", "connection", "show", conn],
-        capture_output=True, text=True, timeout=5
-    )
-    for line in result.stdout.splitlines():
-        if ":" not in line:
-            continue
-        key, _, val = line.partition(":")
-        key = key.strip()
-        val = val.strip()
-        if key == "ipv4.method":
-            base["mode"] = "dhcp" if val == "auto" else "static"
-        elif key == "IP4.ADDRESS[1]" and "/" in val:
-            ip, prefix = val.rsplit("/", 1)
-            base["ip"] = ip.strip()
-            try:
-                base["prefix"] = int(prefix.strip())
-            except ValueError:
-                pass
-        elif key == "IP4.GATEWAY":
-            base["gateway"] = val
-        elif key == "IP4.DNS[1]":
-            base["dns"] = val
+    try:
+        result = subprocess.run(
+            ["nmcli", "-t", "connection", "show", conn],
+            capture_output=True, text=True, timeout=5
+        )
+        for line in result.stdout.splitlines():
+            if ":" not in line:
+                continue
+            key, _, val = line.partition(":")
+            key = key.strip()
+            val = val.strip()
+            if key == "ipv4.method":
+                base["mode"] = "dhcp" if val == "auto" else "static"
+            elif key == "IP4.ADDRESS[1]" and "/" in val:
+                ip, prefix = val.rsplit("/", 1)
+                base["ip"] = ip.strip()
+                try:
+                    base["prefix"] = int(prefix.strip())
+                except ValueError:
+                    pass
+            elif key == "IP4.GATEWAY":
+                base["gateway"] = val
+            elif key == "IP4.DNS[1]":
+                base["dns"] = val
+    except Exception as e:
+        base["error"] = str(e)
     return base
 
 
