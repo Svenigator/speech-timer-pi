@@ -207,45 +207,45 @@ def save_config(config):
         json.dump(config, f, indent=2, ensure_ascii=False)
 
 
-def get_layout_for(num_keys):
+def get_layout_for(num_keys, serial=None):
     """
-    Sucht passendes Layout für die gegebene Tastenanzahl.
-
-    Reihenfolge:
-    1. Custom-Layout aus streamdeck.json unter "layouts.<N>"
-    2. Default-Layout aus DEFAULT_LAYOUTS
-    3. None wenn unbekannt
-
-    Wenn Default benutzt wird, wird er auch in streamdeck.json gespeichert,
-    sodass der User später darin editieren kann.
+    Sucht passendes Layout. Reihenfolge:
+    1. Serial-spezifisches Layout aus streamdeck.json unter "layouts.<serial>"
+    2. Custom-Layout nach Tastenanzahl unter "layouts.<N>"
+    3. Default-Layout aus DEFAULT_LAYOUTS (wird in streamdeck.json persistiert)
+    4. Leeres Layout wenn nichts passt
     """
     config = load_config() or {}
     layouts = config.get("layouts", {})
 
-    # 1. Direkter Treffer im Config?
+    # 1. Serial-spezifisches Layout?
+    if serial and serial in layouts:
+        log.info(f"Serial-Layout für {serial} geladen")
+        return layouts[serial]
+
+    # 2. Direkter Treffer nach Tastenanzahl?
     custom = layouts.get(str(num_keys))
     if custom and isinstance(custom, dict):
         log.info(f"Custom-Layout für {num_keys} Tasten geladen")
         return custom
 
-    # 2. Default?
+    # 3. Default?
     default_entry = DEFAULT_LAYOUTS.get(num_keys)
     if default_entry:
         model_name, default_layout = default_entry
         log.info(f"Default-Layout für {model_name} ({num_keys} Tasten) wird benutzt")
-        # In Config persistieren, damit der User sehen kann was er anpassen könnte
         layouts[str(num_keys)] = default_layout
         config["layouts"] = layouts
         config.setdefault("_comment", (
-            "Layouts pro Tastenanzahl. Tastenpositionen sind 0-indexiert, "
-            "von oben links nach unten rechts. Typen: timer_display, "
-            "preset_slot, action, preset_name_display, info_hostname, "
-            "info_ip_eth0, info_ip_wlan0, blank."
+            "Layouts pro Tastenanzahl oder Serial-Nummer. "
+            "Serial hat Vorrang vor Tastenanzahl. "
+            "Tastenpositionen sind 0-indexiert, von oben links nach unten rechts. "
+            "Typen: timer_display, timer_component, preset_slot, action, "
+            "preset_name_display, info_hostname, info_ip_eth0, info_ip_wlan0, blank."
         ))
         save_config(config)
         return default_layout
 
-    # 3. Wenn wir nichts haben: leeres Layout (Stream Deck zeigt nur leere Tasten)
     log.warning(f"Kein Layout für {num_keys} Tasten - alle Tasten bleiben leer")
     return {}
 
@@ -620,7 +620,7 @@ class StreamDeckController:
         self.network = {}
 
     def open(self):
-        self.deck.open()
+        # Deck wird bereits offen übergeben — nur initialisieren
         self.deck.reset()
         self.deck.set_brightness(70)
         self.deck.set_key_callback(self.on_key)
@@ -730,13 +730,13 @@ class StreamDeckController:
                     return ipv4[0]
         return ""
 
-    def run_loop(self):
+    def run_loop(self, stop_event=None):
         last_status = 0
         last_meta = 0
         period_status = 1.0 / STATUS_POLL_HZ
         period_meta = 5.0
 
-        while not self._stop:
+        while not self._stop and (stop_event is None or not stop_event.is_set()):
             now = time.time()
 
             if now - last_status >= period_status:
@@ -766,69 +766,98 @@ class StreamDeckController:
 
 
 # ============================================================
-# Main
+# Multi-Deck Main
 # ============================================================
-def find_deck():
-    streamdecks = DeviceManager().enumerate()
-    return streamdecks[0] if streamdecks else None
+_active_threads: dict[str, threading.Thread] = {}
+_active_lock = threading.Lock()
+
+
+def run_deck_thread(deck, serial, stop_event, api):
+    """Verwaltet ein einzelnes bereits geöffnetes Stream Deck bis zur Trennung."""
+    log.info(f"Deck {serial} ({deck.deck_type()}) wird verwaltet")
+    try:
+        num_keys = deck.key_count()
+        layout = get_layout_for(num_keys, serial)
+        if not layout:
+            log.error(f"Kein Layout für Deck {serial} ({num_keys} Tasten) — "
+                      f"streamdeck.json manuell konfigurieren")
+            return
+
+        controller = StreamDeckController(deck, layout, api)
+        controller.open()
+        try:
+            controller.run_loop(stop_event)
+        finally:
+            controller.close()
+    except Exception as e:
+        log.error(f"Fehler bei Deck {serial}: {e}", exc_info=True)
+        try:
+            deck.close()
+        except Exception:
+            pass
+
+    log.info(f"Deck {serial} getrennt")
+    with _active_lock:
+        _active_threads.pop(serial, None)
 
 
 def main():
     log.info("Stream Deck Controller startet...")
     api = TimerAPI()
-
-    controller = None
     stop_event = threading.Event()
 
     def shutdown(signum, frame):
         log.info(f"Signal {signum} empfangen, fahre herunter...")
         stop_event.set()
-        if controller:
-            controller.stop()
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
     while not stop_event.is_set():
-        deck = find_deck()
-        if not deck:
-            log.info(f"Kein Stream Deck gefunden, warte {RECONNECT_SECONDS}s...")
+        try:
+            available = DeviceManager().enumerate()
+        except Exception as e:
+            log.error(f"Enumerierungs-Fehler: {e}")
             stop_event.wait(RECONNECT_SECONDS)
             continue
 
-        try:
-            num_keys = deck.key_count()
-            deck_type = deck.deck_type()
-            log.info(f"Stream Deck erkannt: {deck_type} ({num_keys} Tasten)")
+        if not available:
+            log.info(f"Kein Stream Deck gefunden, warte {RECONNECT_SECONDS}s...")
 
-            # Auto-Layout-Wahl basierend auf Tastenanzahl
-            layout = get_layout_for(num_keys)
-
-            if not layout:
-                log.error(f"Kein Layout verfügbar für {num_keys} Tasten - "
-                          f"konfiguriere streamdeck.json manuell")
-                stop_event.wait(RECONNECT_SECONDS * 6)
+        for deck in available:
+            try:
+                deck.open()
+                serial = deck.get_serial_number()
+            except Exception as e:
+                log.debug(f"Deck konnte nicht geöffnet werden: {e}")
+                try:
+                    deck.close()
+                except Exception:
+                    pass
                 continue
 
-            controller = StreamDeckController(deck, layout, api)
-            controller.open()
+            with _active_lock:
+                existing = _active_threads.get(serial)
+                if existing and existing.is_alive():
+                    # Bereits verwaltet — unser frisch geöffnetes Handle schließen
+                    try:
+                        deck.close()
+                    except Exception:
+                        pass
+                    continue
 
-            try:
-                controller.run_loop()
-            finally:
-                controller.close()
-                controller = None
+                log.info(f"Neues Deck erkannt: {deck.deck_type()} "
+                         f"({deck.key_count()} Tasten, Serial: {serial})")
+                t = threading.Thread(
+                    target=run_deck_thread,
+                    args=(deck, serial, stop_event, api),
+                    daemon=True,
+                    name=f"deck-{serial}",
+                )
+                _active_threads[serial] = t
+                t.start()
 
-        except Exception as e:
-            log.error(f"Fehler im Main-Loop: {e}", exc_info=True)
-            try:
-                deck.close()
-            except Exception:
-                pass
-
-        if not stop_event.is_set():
-            log.info(f"Versuche in {RECONNECT_SECONDS}s erneut...")
-            stop_event.wait(RECONNECT_SECONDS)
+        stop_event.wait(RECONNECT_SECONDS)
 
     log.info("Stream Deck Controller beendet")
 
