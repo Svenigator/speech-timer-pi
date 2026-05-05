@@ -10,7 +10,6 @@ import threading
 
 try:
     from pythonosc import dispatcher, osc_server, udp_client
-    from pythonosc.osc_message_builder import OscMessageBuilder
     OSC_AVAILABLE = True
 except ImportError:
     OSC_AVAILABLE = False
