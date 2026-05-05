@@ -626,7 +626,8 @@ class StreamDeckController:
         self.network = {}
         self.display_config = {}
         self._blink_visible = True
-        self._last_blink_toggle = 0.0
+        self._last_blink_toggle = time.time()
+        self._last_phase = ""
 
     def open(self):
         # Deck wird bereits offen übergeben — nur initialisieren
@@ -776,6 +777,12 @@ class StreamDeckController:
             phase = self.state.get("phase", "idle")
             blink_on_warning = self.display_config.get("blink_on_warning", True)
             blink_on_overtime = self.display_config.get("blink_on_overtime", True)
+
+            # Reset blink state on phase change
+            if phase != self._last_phase:
+                self._blink_visible = True
+                self._last_blink_toggle = now
+                self._last_phase = phase
 
             if phase == "warning2" and blink_on_warning:
                 blink_interval = 0.5
