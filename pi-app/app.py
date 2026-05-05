@@ -768,6 +768,75 @@ def api_set_eth0():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route('/api/network/ap', methods=['GET'])
+def api_get_ap():
+    """AP-Status und gespeicherte Konfiguration."""
+    config = load_config()
+    ap_cfg = config.get("ap", {})
+    nm = _detect_network_manager()
+    running = _get_ap_running() if nm else False
+    return jsonify({
+        "nm_available": nm,
+        "running": running,
+        "ip": _get_ap_ip() if running else "",
+        "ssid": ap_cfg.get("ssid", "SpeechTimer"),
+        "password": ap_cfg.get("password", "speechtimer"),
+        "auto_start": ap_cfg.get("auto_start", True),
+    })
+
+
+@app.route('/api/network/ap/config', methods=['POST'])
+def api_ap_config():
+    """Speichert SSID, Passwort und auto_start."""
+    data = request.get_json()
+    ssid = data.get("ssid", "").strip()
+    password = data.get("password", "")
+    if not ssid:
+        return jsonify({"status": "error", "message": "SSID darf nicht leer sein"}), 400
+    if len(password) < 8:
+        return jsonify({"status": "error",
+                        "message": "Passwort muss mindestens 8 Zeichen haben"}), 400
+    config = load_config()
+    config.setdefault("ap", {})
+    config["ap"]["ssid"] = ssid
+    config["ap"]["password"] = password
+    config["ap"]["auto_start"] = bool(data.get("auto_start", True))
+    save_config(config)
+    return jsonify({"status": "ok"})
+
+
+@app.route('/api/network/ap/start', methods=['POST'])
+def api_ap_start():
+    """Startet den Hotspot manuell."""
+    if not _detect_network_manager():
+        return jsonify({"status": "error",
+                        "message": "NetworkManager nicht verfügbar"}), 400
+    config = load_config()
+    ap_cfg = config.get("ap", {})
+    ssid = ap_cfg.get("ssid", "SpeechTimer")
+    password = ap_cfg.get("password", "speechtimer")
+    try:
+        ok, err = _start_ap(ssid, password)
+        if ok:
+            return jsonify({"status": "ok", "ip": _get_ap_ip()})
+        return jsonify({"status": "error", "message": err or "Hotspot konnte nicht gestartet werden"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route('/api/network/ap/stop', methods=['POST'])
+def api_ap_stop():
+    """Stoppt den Hotspot manuell."""
+    if not _detect_network_manager():
+        return jsonify({"status": "error",
+                        "message": "NetworkManager nicht verfügbar"}), 400
+    try:
+        _stop_ap()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 # ============================================================
 # Helpers
 # ============================================================
