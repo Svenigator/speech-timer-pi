@@ -34,7 +34,7 @@ from StreamDeck.ImageHelpers import PILHelper
 # ============================================================
 BASE_DIR = Path(__file__).parent.resolve()
 CONFIG_FILE = BASE_DIR / "streamdeck.json"
-API_BASE = "http://localhost:5000"
+API_BASE = "http://localhost:80"
 
 STATUS_POLL_HZ = 4
 RECONNECT_SECONDS = 5

@@ -1264,4 +1264,4 @@ if __name__ == '__main__':
     apply_osc_config(config["osc"])
     socketio.start_background_task(timer_loop)
     socketio.start_background_task(ap_monitor_thread)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=80, debug=False, allow_unsafe_werkzeug=True)
