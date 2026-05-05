@@ -16,7 +16,7 @@ import re
 import subprocess
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -235,6 +235,12 @@ class TimerController:
                 remaining = self.state["duration"]
                 phase = "loaded"
 
+            if phase in ("normal", "warning1", "warning2", "paused"):
+                end_dt = datetime.now() + timedelta(seconds=max(0, remaining))
+                end_time = end_dt.strftime("%H:%M:%S")
+            else:
+                end_time = ""
+
             return {
                 "running": self.state["running"],
                 "paused": self.state["paused"],
@@ -246,6 +252,7 @@ class TimerController:
                 "preset_name": self.state["preset_name"],
                 "overtime": self.state["overtime"],
                 "current_time": datetime.now().strftime("%H:%M:%S"),
+                "end_time": end_time,
             }
 
 
@@ -500,7 +507,10 @@ def api_delete_preset(preset_id):
 @app.route('/api/display', methods=['GET'])
 def api_get_display():
     config = load_config()
-    return jsonify(config["display"])
+    result = dict(config["display"])
+    result["blink_on_warning"] = config["system"].get("blink_on_warning", True)
+    result["blink_on_overtime"] = config["system"].get("blink_on_overtime", True)
+    return jsonify(result)
 
 
 @app.route('/api/display', methods=['POST'])
