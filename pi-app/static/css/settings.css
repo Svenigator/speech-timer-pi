@@ -1,3 +1,5 @@
+.hidden { display: none; }
+
 /* Tab-Navigation */
 .tabs {
     display: flex;
