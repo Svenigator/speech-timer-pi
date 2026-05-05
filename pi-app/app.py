@@ -790,7 +790,7 @@ def api_ap_config():
     """Speichert SSID, Passwort und auto_start."""
     data = request.get_json()
     ssid = data.get("ssid", "").strip()
-    password = data.get("password", "")
+    password = data.get("password", "").strip()
     if not ssid:
         return jsonify({"status": "error", "message": "SSID darf nicht leer sein"}), 400
     if len(password) < 8:
