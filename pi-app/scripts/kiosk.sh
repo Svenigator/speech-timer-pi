@@ -32,13 +32,22 @@ while ! curl -s http://localhost:5000/ > /dev/null; do
     fi
 done
 
-# Bildschirm-Energiesparmodus deaktivieren
-xset s off 2>/dev/null
-xset s noblank 2>/dev/null
-xset -dpms 2>/dev/null
+# Wayland oder X11?
+SESSION="${XDG_SESSION_TYPE:-x11}"
 
-# Mauszeiger ausblenden nach Inaktivität
-unclutter -idle 1 -root &
+if [ "$SESSION" = "wayland" ]; then
+    # Wayland: Cursor über Cursor-Theme-Größe 0 verstecken
+    export XCURSOR_SIZE=0
+    export XCURSOR_THEME=none
+    PLATFORM_FLAGS="--ozone-platform=wayland --enable-features=UseOzonePlatform"
+else
+    # X11: Energiesparmodus deaktivieren + unclutter
+    xset s off 2>/dev/null
+    xset s noblank 2>/dev/null
+    xset -dpms 2>/dev/null
+    unclutter -idle 1 -root &
+    PLATFORM_FLAGS=""
+fi
 
 # Eventuelle Absturz-Meldungen verhindern
 USER_DATA_DIR="/home/pi/.config/chromium"
@@ -58,4 +67,5 @@ sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' \
     --check-for-update-interval=31536000 \
     --autoplay-policy=no-user-gesture-required \
     --incognito \
+    $PLATFORM_FLAGS \
     http://localhost:5000/
