@@ -578,6 +578,9 @@ class TimerAPI:
     def get_network(self):
         return self._request("GET", "/api/network/status")
 
+    def get_display(self):
+        return self._request("GET", "/api/display")
+
     def start(self):
         return self._request("POST", "/api/timer/start")
 
@@ -621,6 +624,9 @@ class StreamDeckController:
         self.state = {}
         self.presets = []
         self.network = {}
+        self.display_config = {}
+        self._blink_visible = True
+        self._last_blink_toggle = 0.0
 
     def open(self):
         # Deck wird bereits offen übergeben — nur initialisieren
@@ -691,11 +697,17 @@ class StreamDeckController:
             kind = config.get("type")
             try:
                 if kind == "timer_display":
-                    img = self.renderer.render_timer(self.state)
+                    if not self._blink_visible:
+                        img = self.renderer.render_blank()
+                    else:
+                        img = self.renderer.render_timer(self.state)
                 elif kind == "timer_component":
-                    img = self.renderer.render_timer_component(
-                        self.state, config.get("component", "seconds")
-                    )
+                    if not self._blink_visible:
+                        img = self.renderer.render_blank()
+                    else:
+                        img = self.renderer.render_timer_component(
+                            self.state, config.get("component", "seconds")
+                        )
                 elif kind == "preset_name_display":
                     img = self.renderer.render_preset_name(self.state)
                 elif kind == "preset_slot":
@@ -755,7 +767,28 @@ class StreamDeckController:
                 network = self.api.get_network()
                 if network is not None:
                     self.network = network
+                display_cfg = self.api.get_display()
+                if display_cfg is not None:
+                    self.display_config = display_cfg
                 last_meta = now
+
+            # Blink-State berechnen
+            phase = self.state.get("phase", "idle")
+            blink_on_warning = self.display_config.get("blink_on_warning", True)
+            blink_on_overtime = self.display_config.get("blink_on_overtime", True)
+
+            if phase == "warning2" and blink_on_warning:
+                blink_interval = 0.5
+            elif phase == "overtime" and blink_on_overtime:
+                blink_interval = 0.25
+            else:
+                blink_interval = None
+
+            if blink_interval is None:
+                self._blink_visible = True
+            elif now - self._last_blink_toggle >= blink_interval:
+                self._blink_visible = not self._blink_visible
+                self._last_blink_toggle = now
 
             try:
                 self.update_all_keys()
