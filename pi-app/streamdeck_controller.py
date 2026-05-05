@@ -116,10 +116,10 @@ LAYOUT_15_KEYS = {
 
 # 32 Tasten = Stream Deck XL (8 Spalten × 4 Reihen)
 LAYOUT_32_KEYS = {
-    # Reihe 0: Timer-Anzeige + Hauptsteuerung
-    "0": {"type": "timer_display"},
-    "1": {"type": "timer_display"},
-    "2": {"type": "timer_display"},
+    # Reihe 0: Timer-Komponenten + Hauptsteuerung
+    "0": {"type": "timer_component", "component": "hours"},
+    "1": {"type": "timer_component", "component": "minutes"},
+    "2": {"type": "timer_component", "component": "seconds"},
     "3": {"type": "preset_name_display"},
     "4": {"type": "action", "action": "start", "label": "START", "color": COLOR_NORMAL},
     "5": {"type": "action", "action": "pause", "label": "PAUSE", "color": COLOR_PAUSED},
@@ -318,6 +318,44 @@ class ButtonRenderer:
             }.get(phase, phase.upper())
             self._draw_centered_text(
                 d, phase_label, (w // 2, h - 16),
+                self._get_font(FONT_SMALL_SIZE), COLOR_TEXT
+            )
+
+        return self._make_image(bg, draw)
+
+    def render_timer_component(self, state, component):
+        phase = state.get("phase", "idle")
+        bg = get_phase_color(phase)
+
+        if phase in ("idle", "loaded"):
+            total = int(abs(state.get("duration", 0)))
+        elif phase == "stopped":
+            total = 0
+        else:
+            total = int(abs(state.get("remaining", 0)))
+
+        h = total // 3600
+        m = (total % 3600) // 60
+        s = total % 60
+
+        if component == "hours":
+            value = str(h)
+            label = "H"
+        elif component == "minutes":
+            value = f"{m:02d}"
+            label = "MIN"
+        else:
+            value = f"{s:02d}"
+            label = "S"
+
+        def draw(d, img):
+            w, h_ = img.size
+            self._draw_centered_text(
+                d, value, (w // 2, h_ // 2 - 8),
+                self._get_font(FONT_LARGE_SIZE), COLOR_TEXT
+            )
+            self._draw_centered_text(
+                d, label, (w // 2, h_ - 16),
                 self._get_font(FONT_SMALL_SIZE), COLOR_TEXT
             )
 
@@ -651,6 +689,10 @@ class StreamDeckController:
             try:
                 if kind == "timer_display":
                     img = self.renderer.render_timer(self.state)
+                elif kind == "timer_component":
+                    img = self.renderer.render_timer_component(
+                        self.state, config.get("component", "seconds")
+                    )
                 elif kind == "preset_name_display":
                     img = self.renderer.render_preset_name(self.state)
                 elif kind == "preset_slot":
