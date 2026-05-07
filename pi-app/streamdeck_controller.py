@@ -416,7 +416,7 @@ class ButtonRenderer:
 
             if end_time:
                 self._draw_centered_text(
-                    d, end_time[:5], (w // 2, h - 12),
+                    d, "End: " + end_time[:5], (w // 2, h - 12),
                     self._get_font(FONT_SMALL_SIZE), (210, 210, 210)
                 )
 
