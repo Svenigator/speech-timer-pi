@@ -330,25 +330,31 @@ class ButtonRenderer:
         phase = state.get("phase", "idle")
         bg = get_phase_color(phase)
 
+        raw_remaining = state.get("remaining", 0)
+        is_overtime = raw_remaining < 0
+
         if phase in ("idle", "loaded"):
             total = int(abs(state.get("duration", 0)))
         elif phase == "stopped":
             total = 0
         else:
-            total = int(abs(state.get("remaining", 0)))
+            total = int(abs(raw_remaining))
 
         h = total // 3600
         m = (total % 3600) // 60
         s = total % 60
 
+        # Vorzeichen bei Overtime ermitteln
         if component == "hours":
-            value = str(h)
+            value = f"-{h}" if (is_overtime and h > 0) else str(h)
             label = "H"
         elif component == "minutes":
-            value = f"{m:02d}"
+            raw = f"{m:02d}"
+            value = f"-{raw}" if (is_overtime and h == 0 and m > 0) else raw
             label = "MIN"
         else:
-            value = f"{s:02d}"
+            raw = f"{s:02d}"
+            value = f"-{raw}" if (is_overtime and h == 0 and m == 0) else raw
             label = "S"
 
         def draw(d, img):
@@ -368,6 +374,7 @@ class ButtonRenderer:
         phase = state.get("phase", "idle")
         bg = get_phase_color(phase) if phase != "idle" else COLOR_IDLE
         preset_name = state.get("preset_name") or "--"
+        end_time = state.get("end_time", "")
 
         def draw(d, img):
             w, h = img.size
@@ -377,15 +384,16 @@ class ButtonRenderer:
             )
             words = preset_name.split()
 
-            # Schriftgröße dynamisch: bei langen Namen kleiner
             font_size = FONT_MEDIUM_SIZE
             if len(preset_name) > 15:
                 font_size = FONT_SMALL_SIZE + 2
 
             font = self._get_font(font_size)
 
+            # Bei Endzeit: Vorlagenname etwas nach oben
+            center_y = h // 2 - (8 if end_time else 0)
+
             if len(words) > 1:
-                # Beste Zwei-Zeilen-Aufteilung suchen
                 best_split = 1
                 best_diff = 999
                 for i in range(1, len(words)):
@@ -397,14 +405,20 @@ class ButtonRenderer:
                         best_split = i
                 line1 = " ".join(words[:best_split])
                 line2 = " ".join(words[best_split:])
-                self._draw_centered_text(d, line1, (w // 2, h // 2), font, COLOR_TEXT)
-                self._draw_centered_text(d, line2, (w // 2, h // 2 + 22), font, COLOR_TEXT)
+                self._draw_centered_text(d, line1, (w // 2, center_y), font, COLOR_TEXT)
+                self._draw_centered_text(d, line2, (w // 2, center_y + 22), font, COLOR_TEXT)
             else:
                 short = preset_name
                 if len(preset_name) > 13:
                     short = preset_name[:12] + "."
-                self._draw_centered_text(d, short, (w // 2, h // 2 + 6),
+                self._draw_centered_text(d, short, (w // 2, center_y + 6),
                                           font, COLOR_TEXT)
+
+            if end_time:
+                self._draw_centered_text(
+                    d, end_time[:5], (w // 2, h - 12),
+                    self._get_font(FONT_SMALL_SIZE), (210, 210, 210)
+                )
 
         return self._make_image(bg, draw)
 
@@ -532,15 +546,21 @@ class ButtonRenderer:
                 return
 
             # Hostname oder anderes - mit dynamischer Schriftgrößen-Anpassung
-            font_size = FONT_MEDIUM_SIZE
             display_value = value
-            if len(display_value) > 12:
-                font_size = FONT_SMALL_SIZE + 2
             if len(display_value) > 16:
                 display_value = display_value[:15] + "."
+            font_size = FONT_MEDIUM_SIZE
+            max_width = w - 8
+            while font_size > FONT_SMALL_SIZE:
+                font = self._get_font(font_size)
+                bbox = d.textbbox((0, 0), display_value, font=font)
+                if bbox[2] - bbox[0] <= max_width:
+                    break
+                font_size -= 2
+            font = self._get_font(font_size)
             self._draw_centered_text(
                 d, display_value, (w // 2, h // 2 + 6),
-                self._get_font(font_size), COLOR_TEXT
+                font, COLOR_TEXT
             )
 
         return self._make_image((40, 40, 50), draw)

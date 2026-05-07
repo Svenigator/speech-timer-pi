@@ -93,6 +93,8 @@ class TimerController:
             "warning2": 0,
             "preset_name": "",
             "overtime": False,
+            "original_duration": 0,
+            "overtime_at": None,
         }
         self.lock = threading.Lock()
 
@@ -100,6 +102,8 @@ class TimerController:
         """Lädt Preset/Zeit, startet aber NICHT."""
         with self.lock:
             self.state["duration"] = int(data.get("duration", 300))
+            self.state["original_duration"] = self.state["duration"]
+            self.state["overtime_at"] = None
             self.state["warning1"] = int(data.get("warning1", 60))
             self.state["warning2"] = int(data.get("warning2", 30))
             self.state["preset_name"] = data.get("preset_name", "")
@@ -161,6 +165,8 @@ class TimerController:
     def reset(self):
         """Stoppt den Timer und setzt auf die ursprüngliche Startzeit zurück (Preset bleibt geladen)."""
         with self.lock:
+            self.state["duration"] = self.state.get("original_duration") or self.state["duration"]
+            self.state["overtime_at"] = None
             self.state["running"] = False
             self.state["paused"] = False
             self.state["stopped"] = False
@@ -219,6 +225,9 @@ class TimerController:
                 if remaining < 0:
                     phase = "overtime"
                     self.state["overtime"] = True
+                    if not self.state.get("overtime_at"):
+                        overtime_moment = datetime.now() + timedelta(seconds=remaining)
+                        self.state["overtime_at"] = overtime_moment.strftime("%H:%M")
                 elif remaining <= self.state["warning2"]:
                     phase = "warning2"
                 elif remaining <= self.state["warning1"]:
@@ -235,9 +244,17 @@ class TimerController:
                 remaining = self.state["duration"]
                 phase = "loaded"
 
-            if phase in ("normal", "warning1", "warning2", "paused"):
-                end_dt = datetime.now() + timedelta(seconds=max(0, remaining))
+            if phase in ("normal", "warning1", "warning2"):
+                end_dt = datetime.now() + timedelta(seconds=remaining)
                 end_time = end_dt.strftime("%H:%M:%S")
+            elif phase == "paused":
+                if remaining < 0:
+                    end_time = self.state.get("overtime_at") or ""
+                else:
+                    end_dt = datetime.now() + timedelta(seconds=remaining)
+                    end_time = end_dt.strftime("%H:%M:%S")
+            elif phase == "overtime":
+                end_time = self.state.get("overtime_at") or ""
             else:
                 end_time = ""
 
