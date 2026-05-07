@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech Timer Pi – Professioneller Vortragstimer für Raspberry Pi</title>
+  <meta name="description" content="Speech Timer Pi: Vollbild-Timer für Vorträge auf dem Raspberry Pi mit Web-Steuerung, OSC, Stream Deck und Bitfocus Companion.">
+  <style>
+    :root {
+      --bg:        #0d0d0d;
+      --surface:   #161616;
+      --card:      #1e1e1e;
+      --border:    #2a2a2a;
+      --accent:    #00c853;
+      --accent2:   #69f0ae;
+      --warn:      #ffd600;
+      --danger:    #ff1744;
+      --text:      #e8e8e8;
+      --muted:     #888;
+      --radius:    12px;
+      --transition: 0.25s ease;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 64px;
+      background: rgba(13,13,13,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .nav-logo svg { width: 28px; height: 28px; }
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color var(--transition);
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent);
+      color: #000 !important;
+      padding: 0.45rem 1.1rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .nav-cta:hover { background: var(--accent2) !important; }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0,200,83,0.12) 0%, transparent 70%),
+        var(--bg);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,200,83,0.12);
+      border: 1px solid rgba(0,200,83,0.3);
+      color: var(--accent);
+      padding: 4px 14px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4.5rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 1.2rem;
+      letter-spacing: -0.02em;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p {
+      max-width: 620px;
+      font-size: 1.15rem;
+      color: var(--muted);
+      margin-bottom: 2.5rem;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0.75rem 1.6rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all var(--transition);
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-primary:hover {
+      background: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,200,83,0.3);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    /* TIMER DEMO */
+    .timer-demo {
+      margin-top: 4rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem 3.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 0 80px rgba(0,200,83,0.08);
+    }
+    .timer-display {
+      font-size: clamp(4rem, 10vw, 7rem);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.04em;
+      font-family: 'Courier New', monospace;
+      color: var(--accent);
+      transition: color 0.5s;
+      text-shadow: 0 0 40px rgba(0,200,83,0.4);
+    }
+    .timer-display.warn {
+      color: var(--warn);
+      text-shadow: 0 0 40px rgba(255,214,0,0.4);
+    }
+    .timer-display.danger {
+      color: var(--danger);
+      text-shadow: 0 0 40px rgba(255,23,68,0.4);
+      animation: blink 1s step-start infinite;
+    }
+    @keyframes blink { 50% { opacity: 0.4; } }
+    .timer-controls {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .ctrl-btn {
+      padding: 0.5rem 1.2rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all var(--transition);
+    }
+    .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+    .timer-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* SECTIONS */
+    section { padding: 6rem 2rem; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-tag {
+      display: inline-block;
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+    h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+    .section-desc {
+      color: var(--muted);
+      max-width: 560px;
+      margin-bottom: 3rem;
+      font-size: 1.05rem;
+    }
+
+    /* FEATURES GRID */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      transition: border-color var(--transition), transform var(--transition);
+    }
+    .feature-card:hover {
+      border-color: rgba(0,200,83,0.4);
+      transform: translateY(-4px);
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      background: rgba(0,200,83,0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.4rem;
+    }
+    .feature-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* INSTALL */
+    .install-section { background: var(--surface); }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 720px;
+    }
+    .step {
+      display: flex;
+      gap: 1.2rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: rgba(0,200,83,0.15);
+      border: 1px solid rgba(0,200,83,0.3);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+    .step-content h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    .step-content p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.2rem;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      font-family: 'Courier New', monospace;
+      color: var(--accent2);
+      line-height: 1.7;
+    }
+    pre .comment { color: var(--muted); }
+
+    /* HARDWARE */
+    .hardware-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 640px) { .hardware-grid { grid-template-columns: 1fr; } }
+    .hw-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .hw-card h4 {
+      font-weight: 700;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .hw-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .hw-card li {
+      font-size: 0.9rem;
+      color: var(--muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .hw-card li::before { content: '–'; color: var(--accent); flex-shrink: 0; }
+
+    /* INTEGRATIONS */
+    .integrations-section { background: var(--surface); }
+    .integrations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .int-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem;
+      transition: border-color var(--transition);
+    }
+    .int-card:hover { border-color: rgba(0,200,83,0.3); }
+    .int-icon {
+      font-size: 2rem;
+      margin-bottom: 0.8rem;
+      display: block;
+    }
+    .int-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .int-card p { font-size: 0.88rem; color: var(--muted); }
+
+    /* CHANGELOG */
+    .changelog-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      max-width: 760px;
+    }
+    .cl-entry {
+      border-left: 2px solid var(--border);
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    .cl-entry::before {
+      content: '';
+      position: absolute;
+      left: -5px; top: 6px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .cl-entry:first-child { border-color: var(--accent); }
+    .cl-version {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 0.25rem;
+    }
+    .cl-entry h4 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .cl-entry ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .cl-entry li {
+      font-size: 0.88rem;
+      color: var(--muted);
+      display: flex;
+      gap: 8px;
+    }
+    .cl-entry li::before { content: '→'; color: var(--accent); flex-shrink: 0; }
+
+    /* SSH SECTION */
+    .ssh-section { background: var(--surface); }
+    .ssh-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+      gap: 1.5rem;
+    }
+    @media (max-width: 480px) { .ssh-grid { grid-template-columns: 1fr; } }
+    .ssh-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .ssh-card-header {
+      background: var(--card);
+      padding: 0.8rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f56; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #27c93f; }
+    .ssh-card pre {
+      border: none;
+      border-radius: 0;
+      margin: 0;
+      padding: 1.2rem;
+    }
+
+    /* STATS */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 3rem;
+    }
+    @media (max-width: 500px) { .stats { grid-template-columns: 1fr; } }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+    .stat-label { font-size: 0.82rem; color: var(--muted); }
+
+    /* FOOTER */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    footer .footer-logo {
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+    footer p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      list-style: none;
+      margin-bottom: 1rem;
+    }
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color var(--transition);
+    }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-badge {
+      display: inline-flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .fbadge {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .fbadge span { color: var(--accent); font-weight: 600; }
+
+    /* RESPONSIVE NAV */
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <svg viewBox="0 0 28 28" fill="none">
+      <circle cx="14" cy="14" r="13" stroke="#00c853" stroke-width="2"/>
+      <path d="M14 7v7l4 4" stroke="#00c853" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    Speech Timer Pi
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#installation">Installation</a></li>
+    <li><a href="#hardware">Hardware</a></li>
+    <li><a href="#integrations">Integrationen</a></li>
+    <li><a href="#ssh">SSH</a></li>
+    <li><a href="https://github.com/Svenigator/speech-timer-pi" target="_blank" class="nav-cta">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">
+    <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#00c853"/></svg>
+    Version 3.0.5 – Raspberry Pi 4/5
+  </div>
+  <h1>Der professionelle<br><span>Vortragstimer</span><br>auf dem Pi</h1>
+  <p>Vollbild-Timer-Display, Web-Steuerung aus dem Netzwerk, OSC-Integration, Stream Deck Direktanschluss und Bitfocus Companion – alles in einem.</p>
+  <div class="hero-actions">
+    <a href="#installation" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M4 7l4 4 4-4M2 14h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      Jetzt installieren
+    </a>
+    <a href="https://github.com/Svenigator/speech-timer-pi" target="_blank" class="btn btn-outline">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub ansehen
+    </a>
+  </div>
+
+  <!-- LIVE DEMO TIMER -->
+  <div class="timer-demo">
+    <div class="timer-label">Live-Demo – Web-Display</div>
+    <div class="timer-display" id="timerDisplay">15:00</div>
+    <div class="timer-controls">
+      <button class="ctrl-btn" onclick="loadTimer(15)">15 Min</button>
+      <button class="ctrl-btn" onclick="loadTimer(10)">10 Min</button>
+      <button class="ctrl-btn" onclick="loadTimer(5)">5 Min</button>
+      <button class="ctrl-btn active" id="startBtn" onclick="toggleTimer()">Start</button>
+      <button class="ctrl-btn" onclick="resetTimer()">Reset</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-value">3.0</div>
+      <div class="stat-label">Aktuelle Version</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">4+</div>
+      <div class="stat-label">Integrations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">MIT</div>
+      <div class="stat-label">Lizenz</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-tag">Features</div>
+    <h2>Alles was du brauchst</h2>
+    <p class="section-desc">Speech Timer Pi deckt alles ab – vom einfachen Countdown bis zur professionellen Event-Technik mit Stream Deck.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#128250;</div>
+        <h3>Vollbild-Display</h3>
+        <p>Große, klar lesbare Ziffern auf dem Pi-Monitor oder LED-Wand. Kiosk-Modus startet automatisch nach dem Boot.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127760;</div>
+        <h3>Web-Steuerung</h3>
+        <p>Steuerung von jedem Gerät im Netzwerk über den Browser. Keine App, kein Install – einfach IP aufrufen.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#127968;</div>
+        <h3>Warnzonen</h3>
+        <p>Konfigurierbare Farbphasen: grün → gelb bei 3 Min → rot bei 30 Sek → blinkend bei Overtime mit negativer Zeit.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128203;</div>
+        <h3>Presets</h3>
+        <p>Vorkonfigurierte Zeiten für verschiedene Vortragsformate. Laden und separat starten – für präzises Timing.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9881;</div>
+        <h3>Live-Anpassung</h3>
+        <p>+/- 1 Min und +/- 5 Min auch während der Timer läuft. Kein Stoppen notwendig.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128336;</div>
+        <h3>Echtzeit-Uhr</h3>
+        <p>Display umschaltbar zwischen Timer-Countdown und aktueller Uhrzeit. Zeitzonen-Einstellung direkt im Browser.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128246;</div>
+        <h3>OSC-Integration</h3>
+        <p>Open Sound Control für Steuerung und Status-Updates. Perfekt für bestehende AV-Setups und Lichttechnik.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128225;</div>
+        <h3>WLAN-Manager</h3>
+        <p>WLAN-Netzwerke scannen und verbinden direkt aus dem Browser. Kein SSH für Netzwerk-Setup nötig.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128187;</div>
+        <h3>Systemd-Autostart</h3>
+        <p>Startet automatisch bei jedem Boot. Kein Login, kein manuelles Starten – einfach einschalten und loslegen.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALLATION -->
+<section id="installation" class="install-section">
+  <div class="container">
+    <div class="section-tag">Quick Start</div>
+    <h2>In 4 Schritten installiert</h2>
+    <p class="section-desc">Voraussetzung: Raspberry Pi 4 oder 5 mit Raspberry Pi OS Bookworm (64-bit Desktop).</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Repository klonen</h4>
+          <p>Das Repo auf den Pi klonen und in das Verzeichnis wechseln.</p>
+          <pre><span class="comment"># Repository herunterladen</span>
+git clone https://github.com/Svenigator/speech-timer-pi.git
+cd speech-timer-pi</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Dateien an die richtige Stelle kopieren</h4>
+          <p>Die Pi-App-Inhalte in das Home-Verzeichnis kopieren.</p>
+          <pre>mkdir -p ~/speech-timer-pi
+cp -r pi-app/. ~/speech-timer-pi/</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Install-Script ausführen</h4>
+          <p>Das Script installiert alle Abhängigkeiten, richtet Systemd ein und konfiguriert den Kiosk-Modus.</p>
+          <pre>cd ~/speech-timer-pi
+bash scripts/install.sh</pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Neustart</h4>
+          <p>Nach dem Neustart startet der Browser automatisch im Kiosk-Modus. Web-Steuerung erreichbar unter:</p>
+          <pre>sudo reboot
+
+<span class="comment"># Danach erreichbar unter:</span>
+http://&lt;Pi-IP&gt;/control</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HARDWARE -->
+<section id="hardware">
+  <div class="container">
+    <div class="section-tag">Hardware</div>
+    <h2>Empfohlenes Setup</h2>
+    <p class="section-desc">Speech Timer Pi ist optimiert für Raspberry Pi 4 und 5. Beide Modelle werden vollständig unterstützt.</p>
+    <div class="hardware-grid">
+      <div class="hw-card">
+        <h4>&#128204; Raspberry Pi 5 (Empfohlen)</h4>
+        <ul>
+          <li>5V/5A USB-C-Netzteil (offizielles RPi-Netzteil)</li>
+          <li>Mini-HDMI Kabel (nicht Micro-HDMI wie Pi 4)</li>
+          <li>HDMI0 = Port näher am USB-C-Anschluss</li>
+          <li>Raspberry Pi OS Bookworm 64-bit (Desktop)</li>
+          <li>Ethernet oder WLAN</li>
+        </ul>
+      </div>
+      <div class="hw-card">
+        <h4>&#128204; Raspberry Pi 4</h4>
+        <ul>
+          <li>Micro-HDMI Kabel</li>
+          <li>5V/3A USB-C-Netzteil</li>
+          <li>Raspberry Pi OS Bookworm 64-bit (Desktop)</li>
+          <li>Ethernet oder WLAN</li>
+        </ul>
+      </div>
+      <div class="hw-card">
+        <h4>&#128250; Ausgabe</h4>
+        <ul>
+          <li>HDMI-Monitor (beliebige Auflösung)</li>
+          <li>LED-Wand mit HDMI-Eingang</li>
+          <li>Projektor (für grosse Räume)</li>
+          <li>Zweiter Monitor als Presenter-Sicht</li>
+        </ul>
+      </div>
+      <div class="hw-card">
+        <h4>&#128241; Steuerung</h4>
+        <ul>
+          <li>Smartphone/Tablet: Browser genügt</li>
+          <li>Stream Deck direkt per USB am Pi</li>
+          <li>Stream Deck via Bitfocus Companion</li>
+          <li>Jede OSC-fähige App oder Hardware</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section id="integrations" class="integrations-section">
+  <div class="container">
+    <div class="section-tag">Integrationen</div>
+    <h2>Nahtlos integriert</h2>
+    <p class="section-desc">Speech Timer Pi spielt perfekt mit deiner bestehenden Technik zusammen.</p>
+    <div class="integrations-grid">
+      <div class="int-card">
+        <span class="int-icon">&#9654;</span>
+        <h3>Stream Deck direkt</h3>
+        <p>USB-Anschluss direkt am Pi ohne Companion. Auto-Detection des Modells (Mini, Neo, MK.2, XL). Hot-Plug im Betrieb.</p>
+      </div>
+      <div class="int-card">
+        <span class="int-icon">&#128279;</span>
+        <h3>Bitfocus Companion</h3>
+        <p>Ready-to-use Companion-Modul inklusive. Einfach installieren, IP eintragen – alle Buttons und Feedbacks sofort verfügbar.</p>
+      </div>
+      <div class="int-card">
+        <span class="int-icon">&#127926;</span>
+        <h3>OSC</h3>
+        <p>Open Sound Control für Steuerung und Status-Broadcasts. Kompatibel mit QLab, TouchDesigner, ETC Eos und mehr.</p>
+      </div>
+      <div class="int-card">
+        <span class="int-icon">&#128247;</span>
+        <h3>Netzwerk-API</h3>
+        <p>REST-API für eigene Integrationen. Hostname, IPs, SSID, Preset-Namen – alles abrufbar per HTTP.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SSH SECTION -->
+<section id="ssh" class="ssh-section">
+  <div class="container">
+    <div class="section-tag">SSH-Befehle</div>
+    <h2>Fernzugriff &amp; Verwaltung</h2>
+    <p class="section-desc">Alle wichtigen SSH-Befehle für die Verwaltung des Pi und die Website im Unterordner <code style="background:var(--card);padding:2px 8px;border-radius:4px;color:var(--accent);">speech-Timer-pi</code>.</p>
+    <div class="ssh-grid">
+      <div class="ssh-card">
+        <div class="ssh-card-header">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          SSH-Verbindung zum Pi
+        </div>
+        <pre><span class="comment"># Standard-Verbindung</span>
+ssh pi@&lt;PI-IP-ADRESSE&gt;
+
+<span class="comment"># Mit eigenem Benutzernamen</span>
+ssh &lt;benutzername&gt;@&lt;PI-IP-ADRESSE&gt;
+
+<span class="comment"># Pi-IP herausfinden (im Netzwerk)</span>
+arp -a | grep raspberry
+
+<span class="comment"># Oder direkt am Pi:</span>
+hostname -I</pre>
+      </div>
+      <div class="ssh-card">
+        <div class="ssh-card-header">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          Website-Verzeichnis einrichten
+        </div>
+        <pre><span class="comment"># Webserver-Root fuer Nginx (Standard)</span>
+sudo mkdir -p /var/www/html/speech-Timer-pi
+
+<span class="comment"># Repo klonen in Unterordner</span>
+cd /var/www/html
+sudo git clone https://github.com/Svenigator/speech-timer-pi.git speech-Timer-pi
+
+<span class="comment"># Oder nur den website/ Ordner kopieren</span>
+sudo cp -r ~/speech-timer-pi/website/. \
+  /var/www/html/speech-Timer-pi/</pre>
+      </div>
+      <div class="ssh-card">
+        <div class="ssh-card-header">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          Nginx als Webserver einrichten
+        </div>
+        <pre><span class="comment"># Nginx installieren</span>
+sudo apt update && sudo apt install -y nginx
+
+<span class="comment"># Konfigurationsdatei erstellen</span>
+sudo nano /etc/nginx/sites-available/speech-timer
+
+<span class="comment"># Inhalt fuer den Unterordner:</span>
+server {
+  listen 80;
+  root /var/www/html;
+  index index.html;
+  location /speech-Timer-pi {
+    try_files $uri $uri/ =404;
+  }
+}
+
+<span class="comment"># Aktivieren und starten</span>
+sudo ln -s /etc/nginx/sites-available/speech-timer \
+  /etc/nginx/sites-enabled/
+sudo systemctl restart nginx</pre>
+      </div>
+      <div class="ssh-card">
+        <div class="ssh-card-header">
+          <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+          Service-Verwaltung
+        </div>
+        <pre><span class="comment"># Timer-App Status pruefen</span>
+sudo systemctl status speech-timer.service
+
+<span class="comment"># Service neu starten</span>
+sudo systemctl restart speech-timer.service
+
+<span class="comment"># Logs in Echtzeit</span>
+journalctl -fu speech-timer.service
+
+<span class="comment"># Website mit Python schnell testen</span>
+cd /var/www/html/speech-Timer-pi
+python3 -m http.server 8080
+<span class="comment"># Dann: http://&lt;PI-IP&gt;:8080</span>
+
+<span class="comment"># Dateien per SCP auf den Pi kopieren</span>
+scp -r ./website/ pi@&lt;PI-IP&gt;:/var/www/html/speech-Timer-pi/</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHANGELOG -->
+<section id="changelog">
+  <div class="container">
+    <div class="section-tag">Changelog</div>
+    <h2>Versionshistorie</h2>
+    <p class="section-desc">Stetige Weiterentwicklung mit Fokus auf Zuverlässigkeit und professionellem Einsatz.</p>
+    <div class="changelog-list">
+      <div class="cl-entry">
+        <div class="cl-version">v3.0.5 – 2026</div>
+        <h4>Stream Deck Lesbarkeit</h4>
+        <ul>
+          <li>Unicode-Symbole durch ASCII-Text ersetzt (Font-Kompatibilitaet)</li>
+          <li>IP-Adressen zweizeilig mit lesbarer Schriftgroesse</li>
+          <li>Preset-Namen mit dynamischer Schriftgroessen-Anpassung</li>
+        </ul>
+      </div>
+      <div class="cl-entry">
+        <div class="cl-version">v3.0.4 – 2026</div>
+        <h4>Direkter Stream Deck Anschluss am Pi</h4>
+        <ul>
+          <li>Eigenstaendiger Python-Service ohne Companion</li>
+          <li>Auto-Detection: Mini, Neo, MK.2, XL</li>
+          <li>Hot-Plug – USB-Wechsel ohne Neustart</li>
+        </ul>
+      </div>
+      <div class="cl-entry">
+        <div class="cl-version">v3.0.3 – 2026</div>
+        <h4>Companion-Modul v1.2.0</h4>
+        <ul>
+          <li>Neue Netzwerk-Variablen: hostname, ip_eth0, ip_wlan0, ssid</li>
+          <li>Action "Load Preset by ID" fuer stabile Stream-Deck-Buttons</li>
+          <li>Preset-Namen automatisch als Variablen verfuegbar</li>
+        </ul>
+      </div>
+      <div class="cl-entry">
+        <div class="cl-version">v3.0.0 – 2026</div>
+        <h4>Komplettes Redesign</h4>
+        <ul>
+          <li>Getrenntes Laden und Starten</li>
+          <li>OSC-Integration eingefuehrt</li>
+          <li>Live-Zeit-Anpassung waehrend des Timers</li>
+          <li>Display-Mode-Toggle: Timer / Echtzeit-Uhr</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Speech Timer Pi</div>
+  <p>Professioneller Vortragstimer fuer den Raspberry Pi – Open Source, MIT-Lizenz.</p>
+  <ul class="footer-links">
+    <li><a href="https://github.com/Svenigator/speech-timer-pi" target="_blank">GitHub</a></li>
+    <li><a href="https://github.com/Svenigator/speech-timer-pi/blob/main/README.md" target="_blank">Dokumentation</a></li>
+    <li><a href="https://github.com/Svenigator/speech-timer-pi/blob/main/CHANGELOG.md" target="_blank">Changelog</a></li>
+    <li><a href="https://github.com/Svenigator/speech-timer-pi/blob/main/LICENSE" target="_blank">MIT Lizenz</a></li>
+  </ul>
+  <div class="footer-badge">
+    <span class="fbadge">Version <span>3.0.5</span></span>
+    <span class="fbadge">Platform <span>Raspberry Pi 4/5</span></span>
+    <span class="fbadge">Lizenz <span>MIT</span></span>
+    <span class="fbadge">Flask + Python</span>
+  </div>
+  <p style="margin-top:1.5rem; font-size:0.75rem;">&#169; 2026 Svenigator – Open Source auf GitHub</p>
+</footer>
+
+<script>
+  // Timer Demo
+  let totalSeconds = 900;
+  let remaining = 900;
+  let running = false;
+  let interval = null;
+
+  const display = document.getElementById('timerDisplay');
+  const startBtn = document.getElementById('startBtn');
+
+  function fmt(s) {
+    const neg = s < 0;
+    const abs = Math.abs(s);
+    const m = Math.floor(abs / 60);
+    const sec = abs % 60;
+    return (neg ? '-' : '') + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  function updateDisplay() {
+    display.textContent = fmt(remaining);
+    display.className = 'timer-display';
+    if (remaining <= 0) display.classList.add('danger');
+    else if (remaining <= 180) display.classList.add('warn');
+  }
+
+  function loadTimer(min) {
+    clearInterval(interval);
+    running = false;
+    totalSeconds = min * 60;
+    remaining = totalSeconds;
+    startBtn.textContent = 'Start';
+    startBtn.classList.add('active');
+    updateDisplay();
+  }
+
+  function toggleTimer() {
+    if (!running) {
+      running = true;
+      startBtn.textContent = 'Pause';
+      startBtn.classList.remove('active');
+      interval = setInterval(() => {
+        remaining--;
+        updateDisplay();
+      }, 1000);
+    } else {
+      running = false;
+      startBtn.textContent = 'Weiter';
+      startBtn.classList.add('active');
+      clearInterval(interval);
+    }
+  }
+
+  function resetTimer() {
+    clearInterval(interval);
+    running = false;
+    remaining = totalSeconds;
+    startBtn.textContent = 'Start';
+    startBtn.classList.add('active');
+    updateDisplay();
+  }
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href').slice(1);
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
